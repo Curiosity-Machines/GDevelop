@@ -1,17 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
-import { useProjects } from './hooks/useProjects';
-import { Gallery, ProjectForm, Auth } from './components';
-import type { ProjectManifest, ProjectFormData } from './types';
+import { useActivities } from './hooks/useActivities';
+import { Gallery, ProjectForm, Auth, ManifestPage } from './components';
+import type { ActivityWithRelations, ActivityFormData } from './types';
 import './App.css';
 
-type View = 'gallery' | 'create' | 'edit';
+type View = 'gallery' | 'create' | 'edit' | 'manifest';
+
+// Simple URL-based routing
+function useRoute(): { view: View; activityId: string | null } {
+  const [route, setRoute] = useState<{ view: View; activityId: string | null }>({
+    view: 'gallery',
+    activityId: null,
+  });
+
+  useEffect(() => {
+    function parseRoute() {
+      const path = window.location.pathname;
+
+      // Check for manifest route: /manifest/:id
+      const manifestMatch = path.match(/^\/manifest\/([a-zA-Z0-9-]+)/);
+      if (manifestMatch) {
+        return { view: 'manifest' as View, activityId: manifestMatch[1] };
+      }
+
+      return { view: 'gallery' as View, activityId: null };
+    }
+
+    setRoute(parseRoute());
+
+    // Listen for popstate (back/forward navigation)
+    const handlePopState = () => {
+      setRoute(parseRoute());
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  return route;
+}
 
 function App() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { projects, loading: projectsLoading, addProject, updateProject, deleteProject } = useProjects();
+  const { activities, loading: activitiesLoading, addActivity, updateActivity, deleteActivity } = useActivities();
+  const route = useRoute();
   const [view, setView] = useState<View>('gallery');
-  const [editingProject, setEditingProject] = useState<ProjectManifest | null>(null);
+  const [editingActivity, setEditingActivity] = useState<ActivityWithRelations | null>(null);
+
+  // If URL is a manifest route, show manifest page (no auth required)
+  if (route.view === 'manifest' && route.activityId) {
+    return <ManifestPage projectId={route.activityId} />;
+  }
 
   if (authLoading) {
     return (
@@ -27,32 +67,32 @@ function App() {
   }
 
   const handleCreate = () => {
-    setEditingProject(null);
+    setEditingActivity(null);
     setView('create');
   };
 
-  const handleEdit = (project: ProjectManifest) => {
-    setEditingProject(project);
+  const handleEdit = (activity: ActivityWithRelations) => {
+    setEditingActivity(activity);
     setView('edit');
   };
 
-  const handleFormSubmit = async (data: ProjectFormData) => {
-    if (view === 'edit' && editingProject) {
-      await updateProject(editingProject.id, data);
+  const handleFormSubmit = async (data: ActivityFormData) => {
+    if (view === 'edit' && editingActivity) {
+      await updateActivity(editingActivity.id, data);
     } else {
-      await addProject(data);
+      await addActivity(data);
     }
     setView('gallery');
-    setEditingProject(null);
+    setEditingActivity(null);
   };
 
   const handleCancel = () => {
     setView('gallery');
-    setEditingProject(null);
+    setEditingActivity(null);
   };
 
   const handleDelete = async (id: string) => {
-    await deleteProject(id);
+    await deleteActivity(id);
   };
 
   return (
@@ -62,9 +102,9 @@ function App() {
           <img src="/dopple_logo.webp" alt="Dopple" className="logo" />
         </div>
         <div className="header-actions">
-          {view === 'gallery' && projects.length > 0 && (
+          {view === 'gallery' && activities.length > 0 && (
             <button className="btn-header-create" onClick={handleCreate}>
-              + New Project
+              + New Activity
             </button>
           )}
           <button className="btn-sign-out" onClick={signOut}>
@@ -74,21 +114,21 @@ function App() {
       </header>
 
       <main className="app-main">
-        {projectsLoading ? (
+        {activitiesLoading ? (
           <div className="projects-loading">
             <div className="loading-spinner"></div>
-            <p>Loading projects...</p>
+            <p>Loading activities...</p>
           </div>
         ) : view === 'gallery' ? (
           <Gallery
-            projects={projects}
+            projects={activities}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onCreateNew={handleCreate}
           />
         ) : (
           <ProjectForm
-            project={editingProject || undefined}
+            project={editingActivity || undefined}
             onSubmit={handleFormSubmit}
             onCancel={handleCancel}
           />
@@ -96,7 +136,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Dopple Studio - Create and manage your project QR codes</p>
+        <p>Dopple Studio - Create and manage your activity configurations</p>
       </footer>
     </div>
   );

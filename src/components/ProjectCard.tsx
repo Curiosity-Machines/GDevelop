@@ -29,8 +29,10 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
     onEdit(project);
   };
 
+  const config = project.activityConfig;
+
   return (
-    <div 
+    <div
       className={`project-card ${isFocused ? 'focused' : ''}`}
       onClick={onClick}
     >
@@ -41,10 +43,10 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
         <div className="card-background-overlay" />
         <div className="card-header">
           <h3>{project.name}</h3>
-          <a 
-            href={project.url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={project.url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="project-url"
             onClick={(e) => e.stopPropagation()}
           >
@@ -53,11 +55,35 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
         </div>
       </div>
 
+      {/* Activity Config Summary */}
+      <div className="card-config-summary">
+        <div className="config-badges">
+          {config.isLocked && (
+            <span className="badge badge-locked">Locked</span>
+          )}
+          {config.requiredLevel && config.requiredLevel > 1 && (
+            <span className="badge badge-level">Lvl {config.requiredLevel}</span>
+          )}
+          {!config.useDefaultMapping && (
+            <span className="badge badge-custom">Custom Controls</span>
+          )}
+          {config.requiredBubbles && config.requiredBubbles.length > 0 && (
+            <span className="badge badge-bubbles">{config.requiredBubbles.length} Bubbles</span>
+          )}
+          {config.customInputMappings && config.customInputMappings.length > 0 && (
+            <span className="badge badge-mappings">{config.customInputMappings.length} Mappings</span>
+          )}
+        </div>
+        {config.description && (
+          <p className="config-description">{config.description}</p>
+        )}
+      </div>
+
       <div className="card-qr-section">
-        <QRCodeDisplay 
-          project={project} 
-          size={isFocused ? 300 : 200} 
-          showDetails={isFocused} 
+        <QRCodeDisplay
+          project={project}
+          size={isFocused ? 300 : 200}
+          showDetails={isFocused}
         />
       </div>
 

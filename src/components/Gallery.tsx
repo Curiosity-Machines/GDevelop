@@ -16,11 +16,11 @@ export function Gallery({ projects, onEdit, onDelete, onCreateNew }: GalleryProp
   if (projects.length === 0) {
     return (
       <div className="gallery-empty">
-        <div className="empty-icon">📱</div>
-        <h2>No Projects Yet</h2>
-        <p>Create your first project to generate QR codes</p>
+        <div className="empty-icon">🎮</div>
+        <h2>No Activities Yet</h2>
+        <p>Create your first activity to generate QR codes with custom configurations</p>
         <button className="btn-create" onClick={onCreateNew}>
-          Create Project
+          Create Activity
         </button>
       </div>
     );
@@ -29,10 +29,10 @@ export function Gallery({ projects, onEdit, onDelete, onCreateNew }: GalleryProp
   return (
     <div className="gallery">
       <div className="gallery-header">
-        <h2>Your Projects</h2>
-        <span className="project-count">{projects.length} project{projects.length !== 1 ? 's' : ''}</span>
+        <h2>Your Activities</h2>
+        <span className="project-count">{projects.length} activit{projects.length !== 1 ? 'ies' : 'y'}</span>
       </div>
-      
+
       <div className={`gallery-grid ${focusedProject ? 'blurred' : ''}`}>
         {projects.map((project) => (
           <ProjectCard
