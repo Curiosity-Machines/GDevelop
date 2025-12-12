@@ -9,6 +9,12 @@ interface ManifestPageProps {
   projectId: string;
 }
 
+// Generate the API URL for programmatic access
+function getApiUrl(projectId: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${supabaseUrl}/functions/v1/get-manifest?id=${projectId}`;
+}
+
 // Convert DB rows to SerializableActivityData
 function dbToManifest(
   activity: Activity,
@@ -73,7 +79,9 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
   const [manifest, setManifest] = useState<SerializableActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | false>(false);
+
+  const apiUrl = getApiUrl(projectId);
 
   useEffect(() => {
     async function fetchManifest() {
@@ -122,7 +130,27 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
     if (!manifest) return;
     try {
       await navigator.clipboard.writeText(JSON.stringify(manifest, null, 2));
-      setCopied(true);
+      setCopied('json');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyApiUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(apiUrl);
+      setCopied('api');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(`curl "${apiUrl}"`);
+      setCopied('curl');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -175,7 +203,7 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
           </div>
           <div className="manifest-actions">
             <button className="btn-action" onClick={handleCopy}>
-              {copied ? 'Copied!' : 'Copy JSON'}
+              {copied === 'json' ? 'Copied!' : 'Copy JSON'}
             </button>
             <button className="btn-action btn-download" onClick={handleDownload}>
               Download
@@ -193,9 +221,25 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
         </div>
 
         <div className="manifest-raw">
-          <h3>Raw JSON Endpoint</h3>
-          <p>To fetch this manifest programmatically, use:</p>
-          <code className="endpoint-url">{window.location.href}</code>
+          <h3>API Endpoint</h3>
+          <p>Fetch this manifest programmatically with curl or any HTTP client:</p>
+          <div className="api-endpoint-section">
+            <div className="endpoint-row">
+              <code className="endpoint-url">{apiUrl}</code>
+              <button className="btn-copy" onClick={handleCopyApiUrl}>
+                {copied === 'api' ? 'Copied!' : 'Copy URL'}
+              </button>
+            </div>
+            <div className="curl-example">
+              <span className="curl-label">curl command:</span>
+              <div className="curl-row">
+                <code className="curl-command">curl "{apiUrl}"</code>
+                <button className="btn-copy" onClick={handleCopyCurl}>
+                  {copied === 'curl' ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -19,19 +19,25 @@ function generateActivityManifest(project: ProjectManifest): SerializableActivit
   };
 }
 
-// Generate a manifest URL that returns the JSON config
-function generateManifestUrl(project: ProjectManifest): string {
-  // Use the current origin or a configured base URL for the manifest
+// Generate the API URL for programmatic access (curl, fetch, etc.)
+function generateApiUrl(project: ProjectManifest): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${supabaseUrl}/functions/v1/get-manifest?id=${project.id}`;
+}
+
+// Generate a manifest page URL for viewing in browser
+function generateManifestPageUrl(project: ProjectManifest): string {
   const baseUrl = window.location.origin;
   return `${baseUrl}/manifest/${project.id}`;
 }
 
 export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCodeDisplayProps) {
   const [showJson, setShowJson] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | false>(false);
 
   const manifest = generateActivityManifest(project);
-  const manifestUrl = generateManifestUrl(project);
+  const apiUrl = generateApiUrl(project);
+  const manifestPageUrl = generateManifestPageUrl(project);
   const manifestJson = JSON.stringify(manifest, null, 2);
 
   const handleDownloadQR = () => {
@@ -79,17 +85,27 @@ export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCod
   const handleCopyJson = async () => {
     try {
       await navigator.clipboard.writeText(manifestJson);
-      setCopied(true);
+      setCopied('json');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
   };
 
-  const handleCopyUrl = async () => {
+  const handleCopyApiUrl = async () => {
     try {
-      await navigator.clipboard.writeText(manifestUrl);
-      setCopied(true);
+      await navigator.clipboard.writeText(apiUrl);
+      setCopied('api');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(`curl "${apiUrl}"`);
+      setCopied('curl');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -101,7 +117,7 @@ export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCod
       <div className="qr-code-wrapper">
         <QRCodeSVG
           id={`qr-${project.id}`}
-          value={manifestUrl}
+          value={apiUrl}
           size={size}
           level="H"
           includeMargin
@@ -112,14 +128,32 @@ export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCod
 
       {showDetails && (
         <div className="qr-details">
-          <p className="qr-value manifest-url">{manifestUrl}</p>
+          <div className="api-section">
+            <label className="section-label">API Endpoint (for curl/fetch)</label>
+            <div className="api-url-row">
+              <code className="api-url">{apiUrl}</code>
+              <button className="btn-small" onClick={handleCopyApiUrl}>
+                {copied === 'api' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <div className="curl-row">
+              <code className="curl-command">curl "{apiUrl}"</code>
+              <button className="btn-small" onClick={handleCopyCurl}>
+                {copied === 'curl' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+
+          <div className="page-section">
+            <label className="section-label">View Manifest Page</label>
+            <a href={manifestPageUrl} target="_blank" rel="noopener noreferrer" className="manifest-page-link">
+              {manifestPageUrl}
+            </a>
+          </div>
 
           <div className="qr-actions">
             <button className="btn-action" onClick={handleDownloadQR}>
               Download QR
-            </button>
-            <button className="btn-action" onClick={handleCopyUrl}>
-              {copied ? 'Copied!' : 'Copy URL'}
             </button>
             <button className="btn-action btn-json" onClick={() => setShowJson(!showJson)}>
               {showJson ? 'Hide JSON' : 'View JSON'}
@@ -132,7 +166,7 @@ export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCod
                 <span>Activity Manifest</span>
                 <div className="json-actions">
                   <button className="btn-small" onClick={handleCopyJson}>
-                    Copy
+                    {copied === 'json' ? 'Copied!' : 'Copy'}
                   </button>
                   <button className="btn-small" onClick={handleDownloadJson}>
                     Download

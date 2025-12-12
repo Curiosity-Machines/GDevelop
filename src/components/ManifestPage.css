@@ -165,15 +165,69 @@
   font-size: 0.875rem;
 }
 
+.api-endpoint-section {
+  margin-top: 16px;
+}
+
+.endpoint-row,
+.curl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .endpoint-url {
-  display: block;
+  flex: 1;
   padding: 12px 16px;
-  background: #f3f4f6;
+  background: #1f2937;
   border-radius: 6px;
-  font-family: monospace;
-  font-size: 0.85rem;
-  color: #6366f1;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: #10b981;
   word-break: break-all;
+}
+
+.curl-example {
+  margin-top: 16px;
+}
+
+.curl-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.curl-command {
+  flex: 1;
+  padding: 12px 16px;
+  background: #1f2937;
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: #f9fafb;
+  word-break: break-all;
+}
+
+.btn-copy {
+  padding: 10px 16px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: #5558e3;
 }
 
 @media (max-width: 600px) {

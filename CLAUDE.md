@@ -34,6 +34,23 @@ Simple URL-based routing in `App.tsx`:
 - `/` - Gallery view (auth required)
 - `/manifest/:id` - Public JSON manifest page (no auth required)
 
+### Supabase Edge Functions
+
+The `get-manifest` Edge Function provides programmatic API access to activity manifests:
+- **Endpoint**: `{SUPABASE_URL}/functions/v1/get-manifest?id={activity-uuid}`
+- **Method**: GET
+- **Returns**: Raw JSON manifest (same format as `SerializableActivityData`)
+- **Browser behavior**: Automatically redirects to `/manifest/:id` web UI page
+- **Programmatic usage**: `curl "https://<project>.supabase.co/functions/v1/get-manifest?id=<uuid>"`
+- **Force JSON from browser**: Add `?format=json` to bypass redirect
+
+Deploy the function with:
+```bash
+supabase functions deploy get-manifest
+```
+
+The function requires `SITE_URL` environment variable set in Supabase to know where to redirect browsers.
+
 ### Environment Variables
 
 Required in `.env`:
