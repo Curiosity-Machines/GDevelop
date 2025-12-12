@@ -57,6 +57,59 @@
   box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-sign-out {
+  padding: 10px 20px;
+  background: transparent;
+  color: #9ca3af;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-sign-out:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-color: #5a5a7a;
+}
+
+.app-loading,
+.projects-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
+  color: #9ca3af;
+}
+
+.projects-loading {
+  min-height: 300px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #3a3a5a;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .app-main {
   flex: 1;
   padding: 40px;

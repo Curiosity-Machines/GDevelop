@@ -1,15 +1,30 @@
 import { useState } from 'react';
+import { useAuth } from './contexts/AuthContext';
 import { useProjects } from './hooks/useProjects';
-import { Gallery, ProjectForm } from './components';
+import { Gallery, ProjectForm, Auth } from './components';
 import type { ProjectManifest, ProjectFormData } from './types';
 import './App.css';
 
 type View = 'gallery' | 'create' | 'edit';
 
 function App() {
-  const { projects, addProject, updateProject, deleteProject } = useProjects();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { projects, loading: projectsLoading, addProject, updateProject, deleteProject } = useProjects();
   const [view, setView] = useState<View>('gallery');
   const [editingProject, setEditingProject] = useState<ProjectManifest | null>(null);
+
+  if (authLoading) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth />;
+  }
 
   const handleCreate = () => {
     setEditingProject(null);
@@ -21,11 +36,11 @@ function App() {
     setView('edit');
   };
 
-  const handleFormSubmit = (data: ProjectFormData) => {
+  const handleFormSubmit = async (data: ProjectFormData) => {
     if (view === 'edit' && editingProject) {
-      updateProject(editingProject.id, data);
+      await updateProject(editingProject.id, data);
     } else {
-      addProject(data);
+      await addProject(data);
     }
     setView('gallery');
     setEditingProject(null);
@@ -36,6 +51,10 @@ function App() {
     setEditingProject(null);
   };
 
+  const handleDelete = async (id: string) => {
+    await deleteProject(id);
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -43,19 +62,29 @@ function App() {
           <div className="logo">D</div>
           <h1>Dopple Studio</h1>
         </div>
-        {view === 'gallery' && projects.length > 0 && (
-          <button className="btn-header-create" onClick={handleCreate}>
-            + New Project
+        <div className="header-actions">
+          {view === 'gallery' && projects.length > 0 && (
+            <button className="btn-header-create" onClick={handleCreate}>
+              + New Project
+            </button>
+          )}
+          <button className="btn-sign-out" onClick={signOut}>
+            Sign Out
           </button>
-        )}
+        </div>
       </header>
 
       <main className="app-main">
-        {view === 'gallery' ? (
+        {projectsLoading ? (
+          <div className="projects-loading">
+            <div className="loading-spinner"></div>
+            <p>Loading projects...</p>
+          </div>
+        ) : view === 'gallery' ? (
           <Gallery
             projects={projects}
             onEdit={handleEdit}
-            onDelete={deleteProject}
+            onDelete={handleDelete}
             onCreateNew={handleCreate}
           />
         ) : (
