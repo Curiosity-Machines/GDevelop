@@ -11,7 +11,7 @@
 
 .gallery-header h2 {
   margin: 0;
-  color: #fff;
+  color: #111827;
   font-size: 1.5rem;
 }
 
@@ -37,7 +37,7 @@
 }
 
 .gallery-empty h2 {
-  color: #fff;
+  color: #111827;
   margin: 0 0 12px;
   font-size: 1.5rem;
 }

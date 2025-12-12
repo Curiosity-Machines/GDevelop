@@ -9,7 +9,7 @@
   background: #fff;
   border-radius: 12px;
   padding: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .qr-details {
@@ -23,7 +23,7 @@
   word-break: break-all;
   margin: 0 0 12px;
   padding: 8px 12px;
-  background: #0f0f1a;
+  background: #f3f4f6;
   border-radius: 6px;
 }
 

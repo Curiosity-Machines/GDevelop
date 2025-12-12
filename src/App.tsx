@@ -59,8 +59,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="logo-section" onClick={() => setView('gallery')}>
-          <div className="logo">D</div>
-          <h1>Dopple Studio</h1>
+          <img src="/dopple_logo.webp" alt="Dopple" className="logo" />
         </div>
         <div className="header-actions">
           {view === 'gallery' && projects.length > 0 && (

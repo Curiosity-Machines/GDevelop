@@ -51,7 +51,7 @@ export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCod
           level="H"
           includeMargin
           bgColor="#ffffff"
-          fgColor="#1a1a2e"
+          fgColor="#111827"
         />
       </div>
 

@@ -8,9 +8,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 40px;
-  background: #1a1a2e;
-  border-bottom: 1px solid #2a2a4a;
+  padding: 30px 40px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .logo-section {
@@ -21,22 +21,14 @@
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #fff;
+  height: 80px;
+  width: auto;
 }
 
 .app-header h1 {
   margin: 0;
   font-size: 1.5rem;
-  color: #fff;
+  color: #111827;
   font-weight: 600;
 }
 
@@ -66,8 +58,8 @@
 .btn-sign-out {
   padding: 10px 20px;
   background: transparent;
-  color: #9ca3af;
-  border: 1px solid #3a3a5a;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 0.875rem;
   cursor: pointer;
@@ -75,9 +67,9 @@
 }
 
 .btn-sign-out:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  border-color: #5a5a7a;
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
 }
 
 .app-loading,
@@ -98,7 +90,7 @@
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #3a3a5a;
+  border: 3px solid #e5e7eb;
   border-top-color: #6366f1;
   border-radius: 50%;
   animation: spin 1s linear infinite;
