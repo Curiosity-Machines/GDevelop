@@ -6,9 +6,16 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 
-.project-card:hover {
+.project-card.focused {
+  cursor: default;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transform: none !important;
+}
+
+.project-card:hover:not(.focused) {
   transform: translateY(-4px);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
