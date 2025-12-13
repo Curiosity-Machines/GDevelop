@@ -12,7 +12,7 @@ interface ManifestPageProps {
 // Generate the API URL for programmatic access
 function getApiUrl(projectId: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  return `${supabaseUrl}/functions/v1/get-manifest?id=${projectId}`;
+  return `${supabaseUrl}/functions/v1/get-manifest?id=${projectId}&format=json`;
 }
 
 // Convert DB rows to SerializableActivityData
@@ -215,7 +215,7 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
         <div className="manifest-content">
           <div className="manifest-info">
             <h3>Activity Manifest</h3>
-            <p>This JSON configuration defines the Dopple Activity.</p>
+            <p>This JSON configuration defines the Dopple Activity!</p>
           </div>
           <pre className="manifest-json">{JSON.stringify(manifest, null, 2)}</pre>
         </div>
