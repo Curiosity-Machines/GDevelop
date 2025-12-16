@@ -13,20 +13,22 @@ npm run preview   # Preview production build locally
 
 ## Architecture Overview
 
-Dopple Studio is a React 19 + TypeScript web app for creating and managing "Activity" configurations for the Dopple device. Activities define how the Dopple device maps physical inputs (buttons, gyro gestures) to keyboard keys when interacting with web content.
+Dopple Studio is a React 19 + TypeScript web app for creating and managing "Activity" configurations for the Dopple device. Activities store minimal configuration (name, URL, icon) that the Dopple device uses to launch web content.
 
 ### Data Flow
 
-1. **Supabase Backend**: Three normalized tables (`activities`, `activity_bubbles`, `activity_input_mappings`) with Row Level Security
+1. **Supabase Backend**: Single `activities` table with Row Level Security
 2. **AuthContext** (`src/contexts/AuthContext.tsx`): Manages Supabase auth state, provides `useAuth()` hook
 3. **useActivities hook** (`src/hooks/useActivities.ts`): CRUD operations that convert between DB schema and `SerializableActivityData` format
 4. **Components**: Gallery view, ProjectForm for editing, ManifestPage for public JSON export
 
 ### Key Data Types
 
-- `SerializableActivityData` (`src/types.ts`): The canonical activity configuration format, matching what the Dopple device consumes
+- `SerializableActivityData` (`src/types.ts`): The canonical activity configuration format with three fields:
+  - `activityName` (required): Unique name identifier
+  - `url` (optional): URL for the WebView activity
+  - `iconPath` (optional): URL to the activity icon image
 - `Database` types (`src/types/database.ts`): Supabase-generated types mirroring the SQL schema
-- The hook converts between these formats using `dbToActivityConfig()`
 
 ### Routing
 
@@ -61,15 +63,48 @@ VITE_SUPABASE_ANON_KEY=...
 
 ## Database Schema
 
-See `supabase/schema.sql` for the full schema. Key points:
-- `activities` is the main table with all activity settings
-- `activity_bubbles` stores unlock recipe requirements (linked by `activity_id`)
-- `activity_input_mappings` stores device-to-keyboard mappings (linked by `activity_id`)
-- Cascading deletes clean up child records automatically
+See `supabase/schema.sql` for the full schema. The schema includes:
 
-## Type Constants
+```sql
+CREATE TABLE activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,        -- activityName (required)
+  url TEXT,                  -- url (optional, for web URL source)
+  icon_url TEXT,             -- iconPath (optional)
+  bundle_path TEXT,          -- Path to zip bundle in storage (optional)
+  entry_point TEXT,          -- Entry point HTML file within bundle (optional)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
 
-Use const objects instead of enums for TypeScript's `erasableSyntaxOnly`:
-- `BubbleType`: Color (0), Item (1), Empty (2)
-- `DeviceInput`: None (0), BackBtn (2), FrontBtn (3), RollRight (4), etc.
-- `KeyAction`: Press (0), Hold (1), Toggle (2), Continuous (3)
+Row Level Security policies allow:
+- Users to CRUD their own activities
+- Public read access for manifest endpoint
+
+## Activity Bundle Support
+
+Activities support two source types:
+1. **Web URL**: Traditional URL pointing to hosted content
+2. **Bundle Upload**: ZIP file containing a local copy of the activity
+
+### Bundle Upload Flow
+1. User selects "Upload Bundle" in the form
+2. ZIP file is uploaded and parsed with JSZip
+3. HTML files are extracted and presented as entry point options
+4. Selected ZIP is stored in Supabase Storage (`activity-bundles` bucket)
+5. The manifest URL is constructed as: `{SUPABASE_URL}/storage/v1/object/public/activity-bundles/{bundle_path}/{entry_point}`
+
+### Storage Structure
+Bundles are stored at: `activity-bundles/{user_id}/{activity_id}/bundle.zip`
+
+### Migration
+To add bundle support to an existing database, run the migration:
+```bash
+# Via Supabase CLI
+supabase db push
+
+# Or manually in SQL editor
+# Run: supabase/migrations/20241216_add_bundle_support.sql
+```

@@ -29,7 +29,9 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
     onEdit(project);
   };
 
-  const config = project.activityConfig;
+  // Determine if using bundle or URL
+  const isBundle = Boolean(project.bundlePath);
+  const displayUrl = project.activityConfig.url;
 
   return (
     <div
@@ -43,40 +45,23 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
         <div className="card-background-overlay" />
         <div className="card-header">
           <h3>{project.name}</h3>
-          <a
-            href={project.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="project-url"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {project.url}
-          </a>
+          {isBundle ? (
+            <div className="bundle-indicator" onClick={(e) => e.stopPropagation()}>
+              <span className="bundle-badge">📦 Bundle</span>
+              <span className="bundle-url">file://{project.entryPoint || 'index.html'}</span>
+            </div>
+          ) : displayUrl ? (
+            <a
+              href={displayUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="project-url"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {displayUrl}
+            </a>
+          ) : null}
         </div>
-      </div>
-
-      {/* Activity Config Summary */}
-      <div className="card-config-summary">
-        <div className="config-badges">
-          {config.isLocked && (
-            <span className="badge badge-locked">Locked</span>
-          )}
-          {config.requiredLevel && config.requiredLevel > 1 && (
-            <span className="badge badge-level">Lvl {config.requiredLevel}</span>
-          )}
-          {!config.useDefaultMapping && (
-            <span className="badge badge-custom">Custom Controls</span>
-          )}
-          {config.requiredBubbles && config.requiredBubbles.length > 0 && (
-            <span className="badge badge-bubbles">{config.requiredBubbles.length} Bubbles</span>
-          )}
-          {config.customInputMappings && config.customInputMappings.length > 0 && (
-            <span className="badge badge-mappings">{config.customInputMappings.length} Mappings</span>
-          )}
-        </div>
-        {config.description && (
-          <p className="config-description">{config.description}</p>
-        )}
       </div>
 
       <div className="card-qr-section">

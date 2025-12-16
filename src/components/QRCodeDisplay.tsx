@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { ProjectManifest, SerializableActivityData } from '../types';
+import type { ProjectManifest } from '../types';
+import { projectToDisplayManifest, getManifestApiUrl, getManifestPageUrl } from '../lib/manifest';
 import './QRCodeDisplay.css';
 
 interface QRCodeDisplayProps {
@@ -9,35 +10,13 @@ interface QRCodeDisplayProps {
   showDetails?: boolean;
 }
 
-// Generate the activity manifest JSON from project data
-function generateActivityManifest(project: ProjectManifest): SerializableActivityData {
-  return {
-    ...project.activityConfig,
-    activityName: project.name,
-    url: project.url,
-    iconPath: project.icon,
-  };
-}
-
-// Generate the API URL for programmatic access (curl, fetch, etc.)
-function generateApiUrl(project: ProjectManifest): string {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  return `${supabaseUrl}/functions/v1/get-manifest?id=${project.id}`;
-}
-
-// Generate a manifest page URL for viewing in browser
-function generateManifestPageUrl(project: ProjectManifest): string {
-  const baseUrl = window.location.origin;
-  return `${baseUrl}/manifest/${project.id}`;
-}
-
 export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCodeDisplayProps) {
   const [showJson, setShowJson] = useState(false);
   const [copied, setCopied] = useState<string | false>(false);
 
-  const manifest = generateActivityManifest(project);
-  const apiUrl = generateApiUrl(project);
-  const manifestPageUrl = generateManifestPageUrl(project);
+  const manifest = projectToDisplayManifest(project);
+  const apiUrl = getManifestApiUrl(project.id);
+  const manifestPageUrl = getManifestPageUrl(project.id);
   const manifestJson = JSON.stringify(manifest, null, 2);
 
   const handleDownloadQR = () => {

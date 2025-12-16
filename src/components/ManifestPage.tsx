@@ -1,94 +1,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { SerializableActivityData, SerializableBubble, SerializableInputMapping } from '../types';
-import { BubbleType, DeviceInput, KeyAction } from '../types';
-import type { Activity, ActivityBubble, ActivityInputMapping } from '../types/database';
+import { activityToDisplayManifest, getManifestApiUrl, type DisplayManifest } from '../lib/manifest';
 import './ManifestPage.css';
 
 interface ManifestPageProps {
   projectId: string;
 }
 
-// Generate the API URL for programmatic access
-function getApiUrl(projectId: string): string {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  return `${supabaseUrl}/functions/v1/get-manifest?id=${projectId}&format=json`;
-}
-
-// Convert DB rows to SerializableActivityData
-function dbToManifest(
-  activity: Activity,
-  bubbles: ActivityBubble[],
-  mappings: ActivityInputMapping[]
-): SerializableActivityData {
-  return {
-    activityName: activity.name,
-    url: activity.url,
-    iconPath: activity.icon_url ?? undefined,
-    description: activity.description ?? undefined,
-    activityColor: {
-      r: activity.color_r,
-      g: activity.color_g,
-      b: activity.color_b,
-      a: activity.color_a,
-    },
-    requiredLevel: activity.required_level,
-    isLocked: activity.is_locked,
-    shouldUnlockByLumi: activity.should_unlock_by_lumi,
-    recipeName: activity.recipe_name ?? undefined,
-    recipeDescription: activity.recipe_description ?? undefined,
-    useDefaultMapping: activity.use_default_mapping,
-    inputUpdateRate: activity.input_update_rate,
-    departureEmotion: activity.departure_emotion ?? undefined,
-    arrivalEmotion: activity.arrival_emotion ?? undefined,
-    levelUpMoveSpeed: activity.level_up_move_speed,
-    enableOnArrival: activity.enable_on_arrival,
-    enableDelay: activity.enable_delay,
-    playEnableEffect: activity.play_enable_effect,
-    requiredBubbles: bubbles
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((b): SerializableBubble => ({
-        displayName: b.display_name ?? undefined,
-        bubbleType: b.bubble_type as BubbleType,
-        colorName: b.color_name ?? undefined,
-        backgroundColor: {
-          r: b.bg_color_r,
-          g: b.bg_color_g,
-          b: b.bg_color_b,
-          a: b.bg_color_a,
-        },
-        colorTolerance: b.color_tolerance,
-        useHSVMatching: b.use_hsv_matching,
-        itemIds: b.item_ids,
-      })),
-    customInputMappings: mappings
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((m): SerializableInputMapping => ({
-        mappingName: m.mapping_name ?? undefined,
-        enabled: m.enabled,
-        deviceInput: m.device_input as DeviceInput,
-        keyboardKey: m.keyboard_key ?? '',
-        keyAction: m.key_action as KeyAction,
-        gyroThreshold: m.gyro_threshold,
-        gyroSensitivity: m.gyro_sensitivity,
-      })),
-  };
-}
-
 export function ManifestPage({ projectId }: ManifestPageProps) {
-  const [manifest, setManifest] = useState<SerializableActivityData | null>(null);
+  const [manifest, setManifest] = useState<DisplayManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | false>(false);
 
-  const apiUrl = getApiUrl(projectId);
+  const apiUrl = getManifestApiUrl(projectId);
 
   useEffect(() => {
     async function fetchManifest() {
       setLoading(true);
       setError(null);
 
-      // Fetch the activity
       const { data: activity, error: activityError } = await supabase
         .from('activities')
         .select('*')
@@ -101,25 +32,7 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
         return;
       }
 
-      // Fetch bubbles
-      const { data: bubbles } = await supabase
-        .from('activity_bubbles')
-        .select('*')
-        .eq('activity_id', projectId);
-
-      // Fetch input mappings
-      const { data: mappings } = await supabase
-        .from('activity_input_mappings')
-        .select('*')
-        .eq('activity_id', projectId);
-
-      const activityManifest = dbToManifest(
-        activity,
-        bubbles || [],
-        mappings || []
-      );
-
-      setManifest(activityManifest);
+      setManifest(activityToDisplayManifest(activity));
       setLoading(false);
     }
 
@@ -199,7 +112,7 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
         <div className="manifest-header">
           <div className="manifest-title">
             <h1>{manifest.activityName}</h1>
-            <p className="manifest-url">{manifest.url}</p>
+            {manifest.url && <p className="manifest-url">{manifest.url}</p>}
           </div>
           <div className="manifest-actions">
             <button className="btn-action" onClick={handleCopy}>

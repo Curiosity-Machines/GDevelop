@@ -1,27 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import type {
-  Activity,
-  ActivityInsert,
-  ActivityBubble,
-  ActivityBubbleInsert,
-  ActivityInputMapping,
-  ActivityInputMappingInsert,
-} from '../types/database';
-import type {
-  SerializableActivityData,
-  SerializableBubble,
-  SerializableInputMapping,
-} from '../types';
-import { BubbleType, DeviceInput, KeyAction } from '../types';
+import type { Activity, ActivityInsert } from '../types/database';
+import type { SerializableActivityData } from '../types';
 
 // Full activity with related data
 export interface ActivityWithRelations {
   id: string;
   name: string;
-  url: string;
+  url?: string;
   icon?: string;
+  bundlePath?: string;
+  entryPoint?: string;
   activityConfig: SerializableActivityData;
   createdAt: number;
   updatedAt: number;
@@ -31,63 +21,26 @@ export interface ActivityWithRelations {
 export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt'>;
 
 // Convert DB row to SerializableActivityData
-function dbToActivityConfig(
-  activity: Activity,
-  bubbles: ActivityBubble[],
-  mappings: ActivityInputMapping[]
-): SerializableActivityData {
-  return {
+function dbToActivityConfig(activity: Activity): SerializableActivityData {
+  const config: SerializableActivityData = {
     activityName: activity.name,
-    url: activity.url,
+    url: activity.url ?? undefined,
     iconPath: activity.icon_url ?? undefined,
-    description: activity.description ?? undefined,
-    activityColor: {
-      r: activity.color_r,
-      g: activity.color_g,
-      b: activity.color_b,
-      a: activity.color_a,
-    },
-    requiredLevel: activity.required_level,
-    isLocked: activity.is_locked,
-    shouldUnlockByLumi: activity.should_unlock_by_lumi,
-    recipeName: activity.recipe_name ?? undefined,
-    recipeDescription: activity.recipe_description ?? undefined,
-    useDefaultMapping: activity.use_default_mapping,
-    inputUpdateRate: activity.input_update_rate,
-    departureEmotion: activity.departure_emotion ?? undefined,
-    arrivalEmotion: activity.arrival_emotion ?? undefined,
-    levelUpMoveSpeed: activity.level_up_move_speed,
-    enableOnArrival: activity.enable_on_arrival,
-    enableDelay: activity.enable_delay,
-    playEnableEffect: activity.play_enable_effect,
-    requiredBubbles: bubbles
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((b): SerializableBubble => ({
-        displayName: b.display_name ?? undefined,
-        bubbleType: b.bubble_type as BubbleType,
-        colorName: b.color_name ?? undefined,
-        backgroundColor: {
-          r: b.bg_color_r,
-          g: b.bg_color_g,
-          b: b.bg_color_b,
-          a: b.bg_color_a,
-        },
-        colorTolerance: b.color_tolerance,
-        useHSVMatching: b.use_hsv_matching,
-        itemIds: b.item_ids,
-      })),
-    customInputMappings: mappings
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((m): SerializableInputMapping => ({
-        mappingName: m.mapping_name ?? undefined,
-        enabled: m.enabled,
-        deviceInput: m.device_input as DeviceInput,
-        keyboardKey: m.keyboard_key ?? '',
-        keyAction: m.key_action as KeyAction,
-        gyroThreshold: m.gyro_threshold,
-        gyroSensitivity: m.gyro_sensitivity,
-      })),
   };
+
+  // If activity has a bundle, use file:// URL format and include bundleUrl
+  if (activity.bundle_path && activity.entry_point) {
+    config.url = `file://${activity.entry_point}`;
+    config.bundleUrl = getBundleDownloadUrl(activity.bundle_path);
+  }
+  
+  return config;
+}
+
+// Get the download URL for a bundle ZIP file
+export function getBundleDownloadUrl(bundlePath: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${supabaseUrl}/storage/v1/object/public/activity-bundles/${bundlePath}/bundle.zip`;
 }
 
 export function useActivities() {
@@ -106,7 +59,6 @@ export function useActivities() {
     setLoading(true);
     setError(null);
 
-    // Fetch activities with related data
     const { data: activityRows, error: fetchError } = await supabase
       .from('activities')
       .select('*')
@@ -126,47 +78,15 @@ export function useActivities() {
       return;
     }
 
-    const activityIds = activityRows.map((a) => a.id);
-
-    // Fetch all bubbles for these activities
-    const { data: bubbleRows } = await supabase
-      .from('activity_bubbles')
-      .select('*')
-      .in('activity_id', activityIds);
-
-    // Fetch all input mappings for these activities
-    const { data: mappingRows } = await supabase
-      .from('activity_input_mappings')
-      .select('*')
-      .in('activity_id', activityIds);
-
-    // Group by activity
-    const bubblesMap = new Map<string, ActivityBubble[]>();
-    const mappingsMap = new Map<string, ActivityInputMapping[]>();
-
-    (bubbleRows || []).forEach((b) => {
-      const list = bubblesMap.get(b.activity_id) || [];
-      list.push(b);
-      bubblesMap.set(b.activity_id, list);
-    });
-
-    (mappingRows || []).forEach((m) => {
-      const list = mappingsMap.get(m.activity_id) || [];
-      list.push(m);
-      mappingsMap.set(m.activity_id, list);
-    });
-
     // Convert to ActivityWithRelations
     const result: ActivityWithRelations[] = activityRows.map((row) => ({
       id: row.id,
       name: row.name,
-      url: row.url,
+      url: row.url ?? undefined,
       icon: row.icon_url ?? undefined,
-      activityConfig: dbToActivityConfig(
-        row,
-        bubblesMap.get(row.id) || [],
-        mappingsMap.get(row.id) || []
-      ),
+      bundlePath: row.bundle_path ?? undefined,
+      entryPoint: row.entry_point ?? undefined,
+      activityConfig: dbToActivityConfig(row),
       createdAt: new Date(row.created_at).getTime(),
       updatedAt: new Date(row.updated_at).getTime(),
     }));
@@ -179,197 +99,245 @@ export function useActivities() {
     fetchActivities();
   }, [fetchActivities]);
 
-  const addActivity = useCallback(
-    async (data: ActivityFormData): Promise<ActivityWithRelations | null> => {
-      if (!user) return null;
-
-      const config = data.activityConfig;
-
-      // Insert main activity
-      const activityInsert: ActivityInsert = {
-        user_id: user.id,
-        name: data.name,
-        url: data.url,
-        icon_url: data.icon || null,
-        description: config.description || null,
-        color_r: config.activityColor?.r ?? 1,
-        color_g: config.activityColor?.g ?? 1,
-        color_b: config.activityColor?.b ?? 1,
-        color_a: config.activityColor?.a ?? 1,
-        required_level: config.requiredLevel ?? 1,
-        is_locked: config.isLocked ?? false,
-        should_unlock_by_lumi: config.shouldUnlockByLumi ?? false,
-        recipe_name: config.recipeName || null,
-        recipe_description: config.recipeDescription || null,
-        use_default_mapping: config.useDefaultMapping ?? true,
-        input_update_rate: config.inputUpdateRate ?? 0.01,
-        departure_emotion: config.departureEmotion || null,
-        arrival_emotion: config.arrivalEmotion || null,
-        level_up_move_speed: config.levelUpMoveSpeed ?? 20,
-        enable_on_arrival: config.enableOnArrival ?? true,
-        enable_delay: config.enableDelay ?? 1,
-        play_enable_effect: config.playEnableEffect ?? true,
-      };
-
-      const { data: newActivity, error: insertError } = await supabase
-        .from('activities')
-        .insert(activityInsert)
-        .select()
-        .single();
-
-      if (insertError || !newActivity) {
-        setError(insertError?.message || 'Failed to create activity');
-        return null;
-      }
-
-      // Insert bubbles
-      if (config.requiredBubbles && config.requiredBubbles.length > 0) {
-        const bubbleInserts: ActivityBubbleInsert[] = config.requiredBubbles.map((b, i) => ({
-          activity_id: newActivity.id,
-          display_name: b.displayName || null,
-          bubble_type: b.bubbleType,
-          color_name: b.colorName || null,
-          bg_color_r: b.backgroundColor?.r ?? 1,
-          bg_color_g: b.backgroundColor?.g ?? 1,
-          bg_color_b: b.backgroundColor?.b ?? 1,
-          bg_color_a: b.backgroundColor?.a ?? 1,
-          color_tolerance: b.colorTolerance ?? 0.15,
-          use_hsv_matching: b.useHSVMatching ?? false,
-          item_ids: b.itemIds || [],
-          sort_order: i,
-        }));
-
-        await supabase.from('activity_bubbles').insert(bubbleInserts);
-      }
-
-      // Insert input mappings
-      if (config.customInputMappings && config.customInputMappings.length > 0) {
-        const mappingInserts: ActivityInputMappingInsert[] = config.customInputMappings.map((m, i) => ({
-          activity_id: newActivity.id,
-          mapping_name: m.mappingName || null,
-          enabled: m.enabled ?? true,
-          device_input: m.deviceInput,
-          keyboard_key: m.keyboardKey || null,
-          key_action: m.keyAction ?? 0,
-          gyro_threshold: m.gyroThreshold ?? 0.2,
-          gyro_sensitivity: m.gyroSensitivity ?? 1,
-          sort_order: i,
-        }));
-
-        await supabase.from('activity_input_mappings').insert(mappingInserts);
-      }
-
-      const result: ActivityWithRelations = {
-        id: newActivity.id,
-        name: newActivity.name,
-        url: newActivity.url,
-        icon: newActivity.icon_url ?? undefined,
-        activityConfig: config,
-        createdAt: new Date(newActivity.created_at).getTime(),
-        updatedAt: new Date(newActivity.updated_at).getTime(),
-      };
-
-      setActivities((prev) => [result, ...prev]);
-      return result;
+  // Delete a bundle from storage
+  const deleteBundle = useCallback(
+    async (bundlePath: string): Promise<void> => {
+      if (!user) return;
+      const filePath = `${bundlePath}/bundle.zip`;
+      await supabase.storage.from('activity-bundles').remove([filePath]);
     },
     [user]
   );
 
+  // Upload progress state
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    phase: 'preparing' | 'uploading' | 'complete';
+  } | null>(null);
+
+  // Upload a bundle zip file to Supabase storage (uploads ZIP as single file)
+  const uploadBundle = useCallback(
+    async (activityId: string, file: File): Promise<string | null> => {
+      if (!user) return null;
+
+      try {
+        setUploadProgress({ current: 0, total: 1, phase: 'preparing' });
+
+        // Create the file path: {user_id}/{activity_id}/bundle.zip
+        const bundlePath = `${user.id}/${activityId}`;
+        const filePath = `${bundlePath}/bundle.zip`;
+
+        // Delete existing bundle if any
+        await supabase.storage.from('activity-bundles').remove([filePath]);
+
+        setUploadProgress({ current: 0, total: 1, phase: 'uploading' });
+
+        // Upload the ZIP file directly
+        const { error } = await supabase.storage
+          .from('activity-bundles')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: 'application/zip',
+          });
+
+        if (error) {
+          console.error('Failed to upload bundle:', error.message);
+          setError('Failed to upload bundle: ' + error.message);
+          return null;
+        }
+
+        setUploadProgress({ current: 1, total: 1, phase: 'complete' });
+        return bundlePath;
+      } catch (err) {
+        setError('Failed to upload zip file');
+        console.error('Bundle upload error:', err);
+        return null;
+      } finally {
+        // Clear progress after a short delay
+        setTimeout(() => setUploadProgress(null), 1000);
+      }
+    },
+    [user]
+  );
+
+  const addActivity = useCallback(
+    async (
+      data: ActivityFormData,
+      bundleFile?: File
+    ): Promise<ActivityWithRelations | null> => {
+      if (!user) return null;
+
+      try {
+        // First, create the activity to get its ID
+        const activityInsert: ActivityInsert = {
+          user_id: user.id,
+          name: data.name,
+          url: bundleFile ? null : data.url || null,
+          icon_url: data.icon || null,
+          bundle_path: null,
+          entry_point: null,
+        };
+
+        const { data: newActivity, error: insertError } = await supabase
+          .from('activities')
+          .insert(activityInsert)
+          .select()
+          .single();
+
+        if (insertError || !newActivity) {
+          setError(insertError?.message || 'Failed to create activity');
+          return null;
+        }
+
+        // If there's a bundle file, upload it and update the activity
+        let bundlePath: string | null = null;
+        let entryPoint: string | null = null;
+        
+        if (bundleFile) {
+          bundlePath = await uploadBundle(newActivity.id, bundleFile);
+          
+          if (bundlePath) {
+            entryPoint = data.entryPoint || 'index.html';
+            // Update activity with bundle path
+            const { error: updateError } = await supabase
+              .from('activities')
+              .update({
+                bundle_path: bundlePath,
+                entry_point: entryPoint,
+              })
+              .eq('id', newActivity.id);
+              
+            if (updateError) {
+              console.error('Failed to update activity with bundle path:', updateError);
+            }
+          } else {
+            // Bundle upload failed - activity was created but without bundle
+            console.error('Bundle upload failed, activity created without bundle');
+          }
+        }
+
+        const result: ActivityWithRelations = {
+          id: newActivity.id,
+          name: newActivity.name,
+          url: bundlePath ? undefined : (newActivity.url ?? undefined),
+          icon: newActivity.icon_url ?? undefined,
+          bundlePath: bundlePath ?? undefined,
+          entryPoint: entryPoint ?? undefined,
+          activityConfig: dbToActivityConfig({
+            ...newActivity,
+            bundle_path: bundlePath,
+            entry_point: entryPoint,
+          }),
+          createdAt: new Date(newActivity.created_at).getTime(),
+          updatedAt: new Date(newActivity.updated_at).getTime(),
+        };
+
+        setActivities((prev) => [result, ...prev]);
+        return result;
+      } catch (err) {
+        console.error('Error creating activity:', err);
+        setError('Failed to create activity');
+        return null;
+      }
+    },
+    [user, uploadBundle]
+  );
+
   const updateActivity = useCallback(
-    async (id: string, data: Partial<ActivityFormData>): Promise<void> => {
+    async (
+      id: string,
+      data: Partial<ActivityFormData>,
+      bundleFile?: File,
+      clearBundle?: boolean
+    ): Promise<void> => {
       if (!user) return;
 
-      const config = data.activityConfig;
+      // Get current activity to check for existing bundle
+      const currentActivity = activities.find((a) => a.id === id);
 
-      // Update main activity
-      if (config) {
-        const { error: updateError } = await supabase
-          .from('activities')
-          .update({
-            name: data.name,
-            url: data.url,
-            icon_url: data.icon || null,
-            description: config.description || null,
-            color_r: config.activityColor?.r ?? 1,
-            color_g: config.activityColor?.g ?? 1,
-            color_b: config.activityColor?.b ?? 1,
-            color_a: config.activityColor?.a ?? 1,
-            required_level: config.requiredLevel ?? 1,
-            is_locked: config.isLocked ?? false,
-            should_unlock_by_lumi: config.shouldUnlockByLumi ?? false,
-            recipe_name: config.recipeName || null,
-            recipe_description: config.recipeDescription || null,
-            use_default_mapping: config.useDefaultMapping ?? true,
-            input_update_rate: config.inputUpdateRate ?? 0.01,
-            departure_emotion: config.departureEmotion || null,
-            arrival_emotion: config.arrivalEmotion || null,
-            level_up_move_speed: config.levelUpMoveSpeed ?? 20,
-            enable_on_arrival: config.enableOnArrival ?? true,
-            enable_delay: config.enableDelay ?? 1,
-            play_enable_effect: config.playEnableEffect ?? true,
-          })
-          .eq('id', id);
+      // Handle bundle changes
+      let bundlePath = currentActivity?.bundlePath ?? null;
+      let entryPoint = data.entryPoint ?? currentActivity?.entryPoint ?? null;
 
-        if (updateError) {
-          setError(updateError.message);
-          return;
+      if (clearBundle && currentActivity?.bundlePath) {
+        // Clear the bundle
+        await deleteBundle(currentActivity.bundlePath);
+        bundlePath = null;
+        entryPoint = null;
+      } else if (bundleFile) {
+        // Upload new bundle (replaces existing)
+        const newPath = await uploadBundle(id, bundleFile);
+        if (newPath) {
+          bundlePath = newPath;
+          entryPoint = data.entryPoint || 'index.html';
         }
+      }
 
-        // Replace bubbles (delete all, then insert new)
-        await supabase.from('activity_bubbles').delete().eq('activity_id', id);
-        if (config.requiredBubbles && config.requiredBubbles.length > 0) {
-          const bubbleInserts: ActivityBubbleInsert[] = config.requiredBubbles.map((b, i) => ({
-            activity_id: id,
-            display_name: b.displayName || null,
-            bubble_type: b.bubbleType,
-            color_name: b.colorName || null,
-            bg_color_r: b.backgroundColor?.r ?? 1,
-            bg_color_g: b.backgroundColor?.g ?? 1,
-            bg_color_b: b.backgroundColor?.b ?? 1,
-            bg_color_a: b.backgroundColor?.a ?? 1,
-            color_tolerance: b.colorTolerance ?? 0.15,
-            use_hsv_matching: b.useHSVMatching ?? false,
-            item_ids: b.itemIds || [],
-            sort_order: i,
-          }));
-          await supabase.from('activity_bubbles').insert(bubbleInserts);
-        }
+      const { error: updateError } = await supabase
+        .from('activities')
+        .update({
+          name: data.name,
+          url: bundlePath ? null : data.url || null,
+          icon_url: data.icon || null,
+          bundle_path: bundlePath,
+          entry_point: entryPoint,
+        })
+        .eq('id', id);
 
-        // Replace input mappings
-        await supabase.from('activity_input_mappings').delete().eq('activity_id', id);
-        if (config.customInputMappings && config.customInputMappings.length > 0) {
-          const mappingInserts: ActivityInputMappingInsert[] = config.customInputMappings.map((m, i) => ({
-            activity_id: id,
-            mapping_name: m.mappingName || null,
-            enabled: m.enabled ?? true,
-            device_input: m.deviceInput,
-            keyboard_key: m.keyboardKey || null,
-            key_action: m.keyAction ?? 0,
-            gyro_threshold: m.gyroThreshold ?? 0.2,
-            gyro_sensitivity: m.gyroSensitivity ?? 1,
-            sort_order: i,
-          }));
-          await supabase.from('activity_input_mappings').insert(mappingInserts);
-        }
+      if (updateError) {
+        setError(updateError.message);
+        return;
       }
 
       // Update local state
       setActivities((prev) =>
-        prev.map((activity) =>
-          activity.id === id
-            ? { ...activity, ...data, updatedAt: Date.now() }
-            : activity
-        )
+        prev.map((activity) => {
+          if (activity.id !== id) return activity;
+          
+          const updated = {
+            ...activity,
+            name: data.name ?? activity.name,
+            url: bundlePath ? undefined : data.url,
+            icon: data.icon,
+            bundlePath: bundlePath ?? undefined,
+            entryPoint: entryPoint ?? undefined,
+            updatedAt: Date.now(),
+          };
+          
+          return {
+            ...updated,
+            activityConfig: dbToActivityConfig({
+              id: activity.id,
+              user_id: user.id,
+              name: updated.name,
+              url: updated.url ?? null,
+              icon_url: updated.icon ?? null,
+              bundle_path: updated.bundlePath ?? null,
+              entry_point: updated.entryPoint ?? null,
+              created_at: new Date(activity.createdAt).toISOString(),
+              updated_at: new Date(updated.updatedAt).toISOString(),
+            }),
+          };
+        })
       );
     },
-    [user]
+    [user, activities, uploadBundle, deleteBundle]
   );
 
   const deleteActivity = useCallback(
     async (id: string): Promise<void> => {
       if (!user) return;
 
-      // Cascading delete will handle bubbles and mappings
+      // Get current activity to check for existing bundle
+      const currentActivity = activities.find((a) => a.id === id);
+
+      // Delete bundle from storage if exists
+      if (currentActivity?.bundlePath) {
+        await deleteBundle(currentActivity.bundlePath);
+      }
+
       const { error: deleteError } = await supabase
         .from('activities')
         .delete()
@@ -382,7 +350,7 @@ export function useActivities() {
 
       setActivities((prev) => prev.filter((activity) => activity.id !== id));
     },
-    [user]
+    [user, activities, deleteBundle]
   );
 
   const getActivity = useCallback(
@@ -396,6 +364,7 @@ export function useActivities() {
     activities,
     loading,
     error,
+    uploadProgress,
     addActivity,
     updateActivity,
     deleteActivity,

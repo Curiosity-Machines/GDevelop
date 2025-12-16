@@ -1,0 +1,7 @@
+# Supabase Edge Functions Configuration
+
+# Disable JWT verification for the get-manifest function
+# This allows public access via curl without requiring an auth token
+[functions.get-manifest]
+verify_jwt = false
+

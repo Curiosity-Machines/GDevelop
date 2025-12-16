@@ -43,7 +43,7 @@ function useRoute(): { view: View; activityId: string | null } {
 
 function App() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { activities, loading: activitiesLoading, addActivity, updateActivity, deleteActivity } = useActivities();
+  const { activities, loading: activitiesLoading, uploadProgress, addActivity, updateActivity, deleteActivity } = useActivities();
   const route = useRoute();
   const [view, setView] = useState<View>('gallery');
   const [editingActivity, setEditingActivity] = useState<ActivityWithRelations | null>(null);
@@ -76,11 +76,13 @@ function App() {
     setView('edit');
   };
 
-  const handleFormSubmit = async (data: ActivityFormData) => {
+  const handleFormSubmit = async (data: ActivityFormData, bundleFile?: File) => {
     if (view === 'edit' && editingActivity) {
-      await updateActivity(editingActivity.id, data);
+      // Check if we're switching from bundle to URL (clear bundle)
+      const clearBundle = Boolean(editingActivity.bundlePath && !data.entryPoint && data.url);
+      await updateActivity(editingActivity.id, data, bundleFile, clearBundle);
     } else {
-      await addActivity(data);
+      await addActivity(data, bundleFile);
     }
     setView('gallery');
     setEditingActivity(null);
@@ -131,6 +133,7 @@ function App() {
             project={editingActivity || undefined}
             onSubmit={handleFormSubmit}
             onCancel={handleCancel}
+            uploadProgress={uploadProgress}
           />
         )}
       </main>
