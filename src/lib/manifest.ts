@@ -37,7 +37,7 @@ export function projectToDisplayManifest(project: ActivityWithRelations): Displa
 // Generate the API URL for programmatic access
 export function getManifestApiUrl(activityId: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  return `${supabaseUrl}/functions/v1/get-manifest?id=${activityId}&format=json`;
+  return `${supabaseUrl}/functions/v1/get-manifest?id=${activityId}`;
 }
 
 // Generate a manifest page URL for viewing in browser
@@ -45,3 +45,5 @@ export function getManifestPageUrl(activityId: string): string {
   const baseUrl = window.location.origin;
   return `${baseUrl}/manifest/${activityId}`;
 }
+
+

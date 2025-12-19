@@ -13,6 +13,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Minimal activity manifest type
 interface ActivityManifest {
+  projectId: string;
   activityName: string;
   url?: string;
   iconPath?: string;
@@ -38,6 +39,7 @@ function getBundleDownloadUrl(bundlePath: string): string {
 // Convert DB row to manifest format
 function dbToManifest(activity: Activity): ActivityManifest {
   const manifest: ActivityManifest = {
+    projectId: activity.id,
     activityName: activity.name,
   };
 

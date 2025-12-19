@@ -5,3 +5,6 @@
 [functions.get-manifest]
 verify_jwt = false
 
+
+
+

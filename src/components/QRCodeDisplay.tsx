@@ -10,7 +10,7 @@ interface QRCodeDisplayProps {
   showDetails?: boolean;
 }
 
-export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCodeDisplayProps) {
+export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCodeDisplayProps) {
   const [showJson, setShowJson] = useState(false);
   const [copied, setCopied] = useState<string | false>(false);
 
@@ -98,10 +98,10 @@ export function QRCodeDisplay({ project, size = 200, showDetails = true }: QRCod
           id={`qr-${project.id}`}
           value={apiUrl}
           size={size}
-          level="H"
+          level="M"
           includeMargin
           bgColor="#ffffff"
-          fgColor="#111827"
+          fgColor="#000000"
         />
       </div>
 
