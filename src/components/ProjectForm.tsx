@@ -4,6 +4,100 @@ import JSZip from 'jszip';
 import type { ProjectManifest, ProjectFormData, SerializableActivityData, ActivitySourceType } from '../types';
 import './ProjectForm.css';
 
+// Unity-supported texture formats for UnityWebRequestTexture.GetTexture
+const UNITY_SUPPORTED_EXTENSIONS = ['bmp', 'exr', 'hdr', 'iff', 'jpg', 'jpeg', 'pict', 'png', 'psd', 'tga', 'tiff', 'tif'];
+
+// Supported MIME types for data: URLs
+const UNITY_SUPPORTED_MIME_TYPES = [
+  'image/bmp',
+  'image/x-exr',
+  'image/vnd.radiance',
+  'image/iff',
+  'image/x-iff',
+  'image/jpeg',
+  'image/x-pict',
+  'image/png',
+  'image/vnd.adobe.photoshop',
+  'image/x-targa',
+  'image/x-tga',
+  'image/tiff',
+];
+
+interface IconValidation {
+  isValid: boolean;
+  error?: string;
+}
+
+function validateIconUrl(url: string): IconValidation {
+  if (!url.trim()) {
+    return { isValid: true }; // Empty is valid (icon is optional)
+  }
+
+  const trimmedUrl = url.trim();
+
+  // Check for data: URL
+  if (trimmedUrl.startsWith('data:')) {
+    // Validate data:image URL format
+    const dataUrlMatch = trimmedUrl.match(/^data:(image\/[^;,]+)/i);
+    if (!dataUrlMatch) {
+      return {
+        isValid: false,
+        error: 'Data URL must be an image type (e.g., data:image/png;base64,...)',
+      };
+    }
+
+    const mimeType = dataUrlMatch[1].toLowerCase();
+    const isSupported = UNITY_SUPPORTED_MIME_TYPES.some(
+      (supported) => mimeType === supported || mimeType.includes(supported.split('/')[1])
+    );
+
+    if (!isSupported) {
+      return {
+        isValid: false,
+        error: `Unsupported image format. Dopple studio supports: PNG, JPG, BMP, TGA, TIFF, PSD, HDR, EXR`,
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  // Check for HTTPS URL
+  try {
+    const parsedUrl = new URL(trimmedUrl);
+
+    if (parsedUrl.protocol !== 'https:') {
+      return {
+        isValid: false,
+        error: 'Icon URL must use HTTPS protocol for security',
+      };
+    }
+
+    // Extract file extension from pathname
+    const pathname = parsedUrl.pathname.toLowerCase();
+    const extensionMatch = pathname.match(/\.([a-z0-9]+)$/i);
+
+    if (!extensionMatch) {
+      // No extension - we'll allow it but warn (some URLs serve images without extensions)
+      return { isValid: true };
+    }
+
+    const extension = extensionMatch[1].toLowerCase();
+    if (!UNITY_SUPPORTED_EXTENSIONS.includes(extension)) {
+      return {
+        isValid: false,
+        error: `Unsupported image format (.${extension}). Unity supports: PNG, JPG, BMP, TGA, TIFF, PSD, HDR, EXR`,
+      };
+    }
+
+    return { isValid: true };
+  } catch {
+    return {
+      isValid: false,
+      error: 'Invalid URL format. Use an HTTPS URL or data:image URL',
+    };
+  }
+}
+
 interface UploadProgress {
   current: number;
   total: number;
@@ -21,6 +115,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [icon, setIcon] = useState('');
+  const [iconError, setIconError] = useState<string | null>(null);
   const [sourceType, setSourceType] = useState<ActivitySourceType>('url');
   const [bundleFile, setBundleFile] = useState<File | null>(null);
   const [entryPoints, setEntryPoints] = useState<string[]>([]);
@@ -111,9 +206,22 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
     }
   };
 
+  const handleIconChange = (value: string) => {
+    setIcon(value);
+    const validation = validateIconUrl(value);
+    setIconError(validation.error || null);
+  };
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Validate icon URL
+    const iconValidation = validateIconUrl(icon);
+    if (!iconValidation.isValid) {
+      setIconError(iconValidation.error || 'Invalid icon URL');
+      return;
+    }
 
     // Validate based on source type
     if (sourceType === 'bundle' && !bundleFile && !project?.bundlePath) {
@@ -282,15 +390,20 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
           <div className="form-group">
             <label htmlFor="icon">Icon URL</label>
             <input
-              type="url"
+              type="text"
               id="icon"
               value={icon}
-              onChange={(e) => setIcon(e.target.value)}
+              onChange={(e) => handleIconChange(e.target.value)}
               placeholder="https://example.com/icon.png"
+              className={iconError ? 'input-error' : ''}
             />
+            {iconError && <span className="error-message">{iconError}</span>}
+            <span className="field-hint">
+              HTTPS or data:image URL. Supported formats: PNG, JPG, BMP, TGA, TIFF, PSD, HDR, EXR
+            </span>
           </div>
 
-          {icon && (
+          {icon && !iconError && (
             <div className="icon-preview">
               <img src={icon} alt="Icon preview" onError={(e) => (e.currentTarget.style.display = 'none')} />
             </div>
@@ -330,7 +443,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={!!uploadProgress}>
           Cancel
         </button>
-        <button type="submit" className="btn-primary" disabled={isParsingZip || !!uploadProgress}>
+        <button type="submit" className="btn-primary" disabled={isParsingZip || !!uploadProgress || !!iconError}>
           {uploadProgress
             ? 'Uploading...'
             : project
