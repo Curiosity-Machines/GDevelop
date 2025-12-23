@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
 import { activityToDisplayManifest, getManifestApiUrl, type DisplayManifest } from '../lib/manifest';
 import './ManifestPage.css';
@@ -83,6 +84,37 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadQR = () => {
+    if (!manifest) return;
+    const svg = document.getElementById(`qr-${projectId}`);
+    if (!svg) return;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = 400;
+      canvas.height = 400;
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+
+      const pngUrl = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${manifest.activityName.replace(/\s+/g, '-')}-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
   if (loading) {
     return (
       <div className="manifest-page">
@@ -123,6 +155,24 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
             </button>
             <a href="/" className="btn-action btn-back">Back to Studio</a>
           </div>
+        </div>
+
+        <div className="manifest-qr-section">
+          <h3>Scan QR Code</h3>
+          <div className="qr-wrapper">
+            <QRCodeSVG
+              id={`qr-${projectId}`}
+              value={apiUrl}
+              size={280}
+              level="M"
+              includeMargin
+              bgColor="#ffffff"
+              fgColor="#000000"
+            />
+          </div>
+          <button className="btn-action btn-download-qr" onClick={handleDownloadQR}>
+            Download QR Code
+          </button>
         </div>
 
         <div className="manifest-content">
