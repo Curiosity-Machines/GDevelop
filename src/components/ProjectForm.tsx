@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import JSZip from 'jszip';
-import type { ProjectManifest, ProjectFormData, SerializableActivityData, ActivitySourceType } from '../types';
+import type { ProjectManifest, ProjectFormData, SerializableActivityData, ActivitySourceType, IconSourceType } from '../types';
 import './ProjectForm.css';
 
 // Unity-supported texture formats for UnityWebRequestTexture.GetTexture
 const UNITY_SUPPORTED_EXTENSIONS = ['bmp', 'exr', 'hdr', 'iff', 'jpg', 'jpeg', 'pict', 'png', 'psd', 'tga', 'tiff', 'tif'];
+
+// Image extensions to look for in bundles
+const BUNDLE_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'bmp', 'tga', 'tiff', 'tif', 'psd', 'hdr', 'exr', 'webp', 'gif'];
 
 // Supported MIME types for data: URLs
 const UNITY_SUPPORTED_MIME_TYPES = [
@@ -123,6 +126,11 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
   const [isParsingZip, setIsParsingZip] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Icon from bundle support
+  const [iconSourceType, setIconSourceType] = useState<IconSourceType>('url');
+  const [bundleImageFiles, setBundleImageFiles] = useState<string[]>([]);
+  const [selectedBundleIcon, setSelectedBundleIcon] = useState('');
 
   useEffect(() => {
     if (project) {
@@ -139,21 +147,35 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
     }
   }, [project]);
 
-  // Parse zip file to extract HTML entry points
+  // Parse zip file to extract HTML entry points and image files
   const parseZipFile = async (file: File) => {
     setIsParsingZip(true);
     setZipError(null);
     setEntryPoints([]);
     setSelectedEntryPoint('');
+    setBundleImageFiles([]);
+    setSelectedBundleIcon('');
 
     try {
       const zip = await JSZip.loadAsync(file);
       const htmlFiles: string[] = [];
+      const imageFiles: string[] = [];
 
-      // Find all HTML files in the zip
+      // Find all HTML and image files in the zip
       zip.forEach((relativePath, zipEntry) => {
-        if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.html')) {
+        if (zipEntry.dir) return;
+        
+        const lowerPath = relativePath.toLowerCase();
+        
+        // Check for HTML files
+        if (lowerPath.endsWith('.html')) {
           htmlFiles.push(relativePath);
+        }
+        
+        // Check for image files
+        const ext = lowerPath.split('.').pop();
+        if (ext && BUNDLE_IMAGE_EXTENSIONS.includes(ext)) {
+          imageFiles.push(relativePath);
         }
       });
 
@@ -163,7 +185,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
         return;
       }
 
-      // Sort with index.html first, then by path
+      // Sort HTML files with index.html first, then by path
       htmlFiles.sort((a, b) => {
         const aIsIndex = a.toLowerCase().endsWith('index.html');
         const bIsIndex = b.toLowerCase().endsWith('index.html');
@@ -172,10 +194,31 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
         return a.localeCompare(b);
       });
 
+      // Sort image files - prioritize common icon names, then alphabetically
+      imageFiles.sort((a, b) => {
+        const lowerA = a.toLowerCase();
+        const lowerB = b.toLowerCase();
+        const iconPriority = ['icon', 'logo', 'favicon'];
+        
+        const aHasPriority = iconPriority.some(p => lowerA.includes(p));
+        const bHasPriority = iconPriority.some(p => lowerB.includes(p));
+        
+        if (aHasPriority && !bHasPriority) return -1;
+        if (!aHasPriority && bHasPriority) return 1;
+        return a.localeCompare(b);
+      });
+
       setEntryPoints(htmlFiles);
+      setBundleImageFiles(imageFiles);
       setBundleFile(file);
       // Auto-select first entry point (index.html if available)
       setSelectedEntryPoint(htmlFiles[0]);
+      
+      // If images found, default icon source to bundle_asset and select first
+      if (imageFiles.length > 0) {
+        setIconSourceType('bundle_asset');
+        setSelectedBundleIcon(imageFiles[0]);
+      }
     } catch {
       setZipError('Failed to parse zip file. Please ensure it\'s a valid zip archive.');
       setBundleFile(null);
@@ -200,6 +243,9 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
     setBundleFile(null);
     setEntryPoints([]);
     setSelectedEntryPoint('');
+    setBundleImageFiles([]);
+    setSelectedBundleIcon('');
+    setIconSourceType('url');
     setZipError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -216,11 +262,18 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
     e.preventDefault();
     if (!name.trim()) return;
 
-    // Validate icon URL
-    const iconValidation = validateIconUrl(icon);
-    if (!iconValidation.isValid) {
-      setIconError(iconValidation.error || 'Invalid icon URL');
-      return;
+    // Determine the final icon value based on source type
+    const isUsingBundleIcon = sourceType === 'bundle' && iconSourceType === 'bundle_asset' && selectedBundleIcon;
+    const finalIconUrl = isUsingBundleIcon ? undefined : icon.trim() || undefined;
+    const iconBundlePath = isUsingBundleIcon ? selectedBundleIcon : undefined;
+
+    // Validate icon URL (only if using URL source)
+    if (!isUsingBundleIcon) {
+      const iconValidation = validateIconUrl(icon);
+      if (!iconValidation.isValid) {
+        setIconError(iconValidation.error || 'Invalid icon URL');
+        return;
+      }
     }
 
     // Validate based on source type
@@ -232,14 +285,15 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
     const activityConfig: SerializableActivityData = {
       activityName: name.trim(),
       url: sourceType === 'url' ? url.trim() || undefined : undefined,
-      iconPath: icon.trim() || undefined,
+      iconPath: finalIconUrl,
     };
 
     onSubmit(
       {
         name: name.trim(),
         url: sourceType === 'url' ? url.trim() || undefined : undefined,
-        icon: icon.trim() || undefined,
+        icon: finalIconUrl,
+        iconBundlePath,
         entryPoint: sourceType === 'bundle' ? selectedEntryPoint || undefined : undefined,
         activityConfig,
       },
@@ -253,6 +307,9 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
       setBundleFile(null);
       setEntryPoints([]);
       setSelectedEntryPoint('');
+      setBundleImageFiles([]);
+      setSelectedBundleIcon('');
+      setIconSourceType('url');
     }
   };
 
@@ -387,23 +444,70 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
             </div>
           )}
 
+          {/* Icon Section */}
           <div className="form-group">
-            <label htmlFor="icon">Icon URL</label>
-            <input
-              type="text"
-              id="icon"
-              value={icon}
-              onChange={(e) => handleIconChange(e.target.value)}
-              placeholder="https://example.com/icon.png"
-              className={iconError ? 'input-error' : ''}
-            />
-            {iconError && <span className="error-message">{iconError}</span>}
-            <span className="field-hint">
-              HTTPS or data:image URL. Supported formats: PNG, JPG, BMP, TGA, TIFF, PSD, HDR, EXR
-            </span>
+            <label>Icon</label>
+            
+            {/* Show icon source toggle only when using bundle and bundle has images */}
+            {sourceType === 'bundle' && bundleImageFiles.length > 0 && (
+              <div className="icon-source-toggle">
+                <button
+                  type="button"
+                  className={`toggle-btn-small ${iconSourceType === 'bundle_asset' ? 'active' : ''}`}
+                  onClick={() => setIconSourceType('bundle_asset')}
+                >
+                  📦 From Bundle
+                </button>
+                <button
+                  type="button"
+                  className={`toggle-btn-small ${iconSourceType === 'url' ? 'active' : ''}`}
+                  onClick={() => setIconSourceType('url')}
+                >
+                  🔗 URL
+                </button>
+              </div>
+            )}
+            
+            {/* Icon from Bundle dropdown */}
+            {sourceType === 'bundle' && iconSourceType === 'bundle_asset' && bundleImageFiles.length > 0 ? (
+              <>
+                <select
+                  id="bundleIcon"
+                  value={selectedBundleIcon}
+                  onChange={(e) => setSelectedBundleIcon(e.target.value)}
+                  className="bundle-icon-select"
+                >
+                  <option value="">No icon</option>
+                  {bundleImageFiles.map((imgPath) => (
+                    <option key={imgPath} value={imgPath}>
+                      {imgPath}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-hint">
+                  Select an image from your bundle to use as the icon
+                </span>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  id="icon"
+                  value={icon}
+                  onChange={(e) => handleIconChange(e.target.value)}
+                  placeholder="https://example.com/icon.png"
+                  className={iconError ? 'input-error' : ''}
+                />
+                {iconError && <span className="error-message">{iconError}</span>}
+                <span className="field-hint">
+                  HTTPS or data:image URL. Supported formats: PNG, JPG, BMP, TGA, TIFF, PSD, HDR, EXR
+                </span>
+              </>
+            )}
           </div>
 
-          {icon && !iconError && (
+          {/* Icon preview for URL */}
+          {iconSourceType === 'url' && icon && !iconError && (
             <div className="icon-preview">
               <img src={icon} alt="Icon preview" onError={(e) => (e.currentTarget.style.display = 'none')} />
             </div>

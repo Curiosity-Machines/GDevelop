@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import JSZip from 'jszip';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Activity, ActivityInsert } from '../types/database';
@@ -18,7 +19,9 @@ export interface ActivityWithRelations {
 }
 
 // Form data for creating/updating
-export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt'>;
+export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt'> & {
+  iconBundlePath?: string;  // Path to icon file within the bundle ZIP (e.g., "assets/icon.png")
+};
 
 // Convert DB row to SerializableActivityData
 function dbToActivityConfig(activity: Activity): SerializableActivityData {
@@ -41,6 +44,32 @@ function dbToActivityConfig(activity: Activity): SerializableActivityData {
 export function getBundleDownloadUrl(bundlePath: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   return `${supabaseUrl}/storage/v1/object/public/activity-bundles/${bundlePath}/bundle.zip`;
+}
+
+// Get the download URL for an icon stored in the activity-bundles bucket
+export function getIconDownloadUrl(bundlePath: string, iconFileName: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${supabaseUrl}/storage/v1/object/public/activity-bundles/${bundlePath}/${iconFileName}`;
+}
+
+// Get MIME type from file extension
+function getMimeType(filename: string): string {
+  const ext = filename.toLowerCase().split('.').pop();
+  const mimeTypes: Record<string, string> = {
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'bmp': 'image/bmp',
+    'tga': 'image/x-targa',
+    'tiff': 'image/tiff',
+    'tif': 'image/tiff',
+    'psd': 'image/vnd.adobe.photoshop',
+    'hdr': 'image/vnd.radiance',
+    'exr': 'image/x-exr',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
 }
 
 export function useActivities() {
@@ -162,6 +191,62 @@ export function useActivities() {
     [user]
   );
 
+  // Extract and upload an icon from a bundle ZIP file
+  const uploadIconFromBundle = useCallback(
+    async (
+      activityId: string,
+      bundleFile: File,
+      iconPath: string
+    ): Promise<string | null> => {
+      if (!user) return null;
+
+      try {
+        // Parse the ZIP file
+        const zip = await JSZip.loadAsync(bundleFile);
+        const iconFile = zip.file(iconPath);
+
+        if (!iconFile) {
+          console.error(`Icon file not found in bundle: ${iconPath}`);
+          return null;
+        }
+
+        // Extract the icon as a blob
+        const iconBlob = await iconFile.async('blob');
+        
+        // Get the filename (last part of the path)
+        const iconFileName = 'icon.' + iconPath.split('.').pop();
+        
+        // Create the storage path: {user_id}/{activity_id}/icon.{ext}
+        const bundlePath = `${user.id}/${activityId}`;
+        const storagePath = `${bundlePath}/${iconFileName}`;
+
+        // Delete existing icon if any
+        await supabase.storage.from('activity-bundles').remove([storagePath]);
+
+        // Upload the icon
+        const { error } = await supabase.storage
+          .from('activity-bundles')
+          .upload(storagePath, iconBlob, {
+            cacheControl: '86400', // 24 hours cache
+            upsert: true,
+            contentType: getMimeType(iconPath),
+          });
+
+        if (error) {
+          console.error('Failed to upload icon from bundle:', error.message);
+          return null;
+        }
+
+        // Return the public URL for the icon
+        return getIconDownloadUrl(bundlePath, iconFileName);
+      } catch (err) {
+        console.error('Error extracting icon from bundle:', err);
+        return null;
+      }
+    },
+    [user]
+  );
+
   const addActivity = useCallback(
     async (
       data: ActivityFormData,
@@ -194,18 +279,33 @@ export function useActivities() {
         // If there's a bundle file, upload it and update the activity
         let bundlePath: string | null = null;
         let entryPoint: string | null = null;
+        let iconUrl: string | null = data.icon || null;
         
         if (bundleFile) {
           bundlePath = await uploadBundle(newActivity.id, bundleFile);
           
           if (bundlePath) {
             entryPoint = data.entryPoint || 'index.html';
-            // Update activity with bundle path
+            
+            // If there's an icon to extract from the bundle, do it
+            if (data.iconBundlePath) {
+              const uploadedIconUrl = await uploadIconFromBundle(
+                newActivity.id,
+                bundleFile,
+                data.iconBundlePath
+              );
+              if (uploadedIconUrl) {
+                iconUrl = uploadedIconUrl;
+              }
+            }
+            
+            // Update activity with bundle path and potentially new icon URL
             const { error: updateError } = await supabase
               .from('activities')
               .update({
                 bundle_path: bundlePath,
                 entry_point: entryPoint,
+                icon_url: iconUrl,
               })
               .eq('id', newActivity.id);
               
@@ -222,13 +322,14 @@ export function useActivities() {
           id: newActivity.id,
           name: newActivity.name,
           url: bundlePath ? undefined : (newActivity.url ?? undefined),
-          icon: newActivity.icon_url ?? undefined,
+          icon: iconUrl ?? undefined,
           bundlePath: bundlePath ?? undefined,
           entryPoint: entryPoint ?? undefined,
           activityConfig: dbToActivityConfig({
             ...newActivity,
             bundle_path: bundlePath,
             entry_point: entryPoint,
+            icon_url: iconUrl,
           }),
           createdAt: new Date(newActivity.created_at).getTime(),
           updatedAt: new Date(newActivity.updated_at).getTime(),
@@ -242,7 +343,7 @@ export function useActivities() {
         return null;
       }
     },
-    [user, uploadBundle]
+    [user, uploadBundle, uploadIconFromBundle]
   );
 
   const updateActivity = useCallback(
@@ -260,6 +361,7 @@ export function useActivities() {
       // Handle bundle changes
       let bundlePath = currentActivity?.bundlePath ?? null;
       let entryPoint = data.entryPoint ?? currentActivity?.entryPoint ?? null;
+      let iconUrl: string | null = data.icon || currentActivity?.icon || null;
 
       if (clearBundle && currentActivity?.bundlePath) {
         // Clear the bundle
@@ -272,7 +374,24 @@ export function useActivities() {
         if (newPath) {
           bundlePath = newPath;
           entryPoint = data.entryPoint || 'index.html';
+          
+          // If there's an icon to extract from the bundle, do it
+          if (data.iconBundlePath) {
+            const uploadedIconUrl = await uploadIconFromBundle(
+              id,
+              bundleFile,
+              data.iconBundlePath
+            );
+            if (uploadedIconUrl) {
+              iconUrl = uploadedIconUrl;
+            }
+          }
         }
+      } else if (data.iconBundlePath && bundlePath) {
+        // Updating icon from existing bundle - we need to re-download and extract
+        // For now, this case would require re-uploading the bundle
+        // In a future enhancement, we could fetch the existing bundle and extract
+        console.warn('Cannot change icon from bundle without re-uploading the bundle');
       }
 
       const { error: updateError } = await supabase
@@ -280,7 +399,7 @@ export function useActivities() {
         .update({
           name: data.name,
           url: bundlePath ? null : data.url || null,
-          icon_url: data.icon || null,
+          icon_url: iconUrl,
           bundle_path: bundlePath,
           entry_point: entryPoint,
         })
@@ -300,7 +419,7 @@ export function useActivities() {
             ...activity,
             name: data.name ?? activity.name,
             url: bundlePath ? undefined : data.url,
-            icon: data.icon,
+            icon: iconUrl ?? undefined,
             bundlePath: bundlePath ?? undefined,
             entryPoint: entryPoint ?? undefined,
             updatedAt: Date.now(),
@@ -323,7 +442,7 @@ export function useActivities() {
         })
       );
     },
-    [user, activities, uploadBundle, deleteBundle]
+    [user, activities, uploadBundle, uploadIconFromBundle, deleteBundle]
   );
 
   const deleteActivity = useCallback(

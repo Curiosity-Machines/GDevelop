@@ -16,6 +16,9 @@ export const defaultActivityData: SerializableActivityData = {
 // Source type for activity content
 export type ActivitySourceType = 'url' | 'bundle';
 
+// Source type for icon (when using bundles)
+export type IconSourceType = 'url' | 'bundle_asset';
+
 // Activity with relations (used by hook and components)
 export interface ActivityWithRelations {
   id: string;
@@ -30,7 +33,9 @@ export interface ActivityWithRelations {
 }
 
 // Form data for creating/updating activities
-export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt'>;
+export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt'> & {
+  iconBundlePath?: string;  // Path to icon file within the bundle ZIP (e.g., "assets/icon.png")
+};
 
 // Legacy aliases for compatibility
 export type ProjectManifest = ActivityWithRelations;
