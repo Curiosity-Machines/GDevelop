@@ -55,6 +55,23 @@
   gap: 12px;
 }
 
+.btn-account-settings {
+  padding: 10px 20px;
+  background: transparent;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-account-settings:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
 .btn-sign-out {
   padding: 10px 20px;
   background: transparent;

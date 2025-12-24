@@ -216,6 +216,16 @@
   margin: 0;
 }
 
+.auth-footer p:not(:last-child) {
+  margin-bottom: 8px;
+}
+
+.auth-info {
+  font-size: 12px !important;
+  color: #9ca3af !important;
+  margin-top: 12px !important;
+}
+
 .auth-toggle {
   background: none;
   border: none;

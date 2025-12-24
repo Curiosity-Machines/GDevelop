@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, UserIdentity } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+
+type OAuthProvider = 'github' | 'google' | 'gitlab' | 'bitbucket';
 
 interface AuthContextType {
   user: User | null;
@@ -8,7 +10,10 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithOAuth: (provider: 'github') => Promise<void>;
+  signInWithOAuth: (provider: OAuthProvider) => Promise<void>;
+  linkIdentity: (provider: OAuthProvider) => Promise<{ error: Error | null }>;
+  getUserIdentities: () => Promise<{ identities: UserIdentity[]; error: Error | null }>;
+  unlinkIdentity: (identity: UserIdentity) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -63,12 +68,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const linkIdentity = async (provider: OAuthProvider) => {
+    const { error } = await supabase.auth.linkIdentity({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}`,
+      },
+    });
+    return { error: error as Error | null };
+  };
+
+  const getUserIdentities = async () => {
+    const { data, error } = await supabase.auth.getUserIdentities();
+    return {
+      identities: data?.identities || [],
+      error: error as Error | null,
+    };
+  };
+
+  const unlinkIdentity = async (identity: UserIdentity) => {
+    const { error } = await supabase.auth.unlinkIdentity(identity);
+    return { error: error as Error | null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signInWithOAuth, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signUp,
+        signIn,
+        signInWithOAuth,
+        linkIdentity,
+        getUserIdentities,
+        unlinkIdentity,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

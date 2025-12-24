@@ -118,6 +118,9 @@ export function Auth() {
               {mode === 'signin' ? 'Sign Up' : 'Sign In'}
             </button>
           </p>
+          <p className="auth-info">
+            Tip: After signing in, you can link additional accounts (e.g., GitHub) in Account Settings.
+          </p>
         </div>
       </div>
     </div>

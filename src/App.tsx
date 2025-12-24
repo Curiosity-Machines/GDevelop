@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useActivities } from './hooks/useActivities';
-import { Gallery, ProjectForm, Auth, ManifestPage } from './components';
+import { Gallery, ProjectForm, Auth, ManifestPage, AccountSettings } from './components';
 import type { ActivityWithRelations, ActivityFormData } from './types';
 import './App.css';
 
@@ -47,6 +47,7 @@ function App() {
   const route = useRoute();
   const [view, setView] = useState<View>('gallery');
   const [editingActivity, setEditingActivity] = useState<ActivityWithRelations | null>(null);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
 
   // If URL is a manifest route, show manifest page (no auth required)
   if (route.view === 'manifest' && route.activityId) {
@@ -109,6 +110,9 @@ function App() {
               + New Activity
             </button>
           )}
+          <button className="btn-account-settings" onClick={() => setShowAccountSettings(true)}>
+            Account
+          </button>
           <button className="btn-sign-out" onClick={signOut}>
             Sign Out
           </button>
@@ -141,6 +145,8 @@ function App() {
       <footer className="app-footer">
         <p>Dopple Studio - Create and manage your activity configurations</p>
       </footer>
+
+      {showAccountSettings && <AccountSettings onClose={() => setShowAccountSettings(false)} />}
     </div>
   );
 }
