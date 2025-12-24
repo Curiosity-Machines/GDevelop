@@ -90,11 +90,6 @@ export function AccountSettings({ onClose }: { onClose: () => void }) {
     return identities.some((id) => id.provider === provider);
   };
 
-  const getIdentityEmail = (provider: string) => {
-    const identity = identities.find((id) => id.provider === provider);
-    return identity?.identity_data?.email || identity?.identity_data?.user_name || 'N/A';
-  };
-
   const formatRelativeTime = (dateString: string | undefined | null, isCreated: boolean = false) => {
     if (!dateString) return 'Never';
     try {
