@@ -98,6 +98,31 @@
   display: block;
 }
 
+.public-qr-footer {
+  position: relative;
+  z-index: 2;
+  margin-top: 8px;
+}
+
+.public-qr-made-with {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.public-qr-made-with:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 @media (max-width: 600px) {
   .public-qr-container {
     padding: 32px 24px;

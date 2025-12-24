@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { activityToDisplayManifest, getManifestApiUrl, getPublicQRPageUrl, type DisplayManifest } from '../lib/manifest';
 import './ManifestPage.css';
 
@@ -9,6 +10,7 @@ interface ManifestPageProps {
 }
 
 export function ManifestPage({ projectId }: ManifestPageProps) {
+  const { user, loading: authLoading } = useAuth();
   const [manifest, setManifest] = useState<DisplayManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,16 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
   const publicQRPageUrl = getPublicQRPageUrl(projectId);
 
   useEffect(() => {
+    // Check authentication and redirect if not authenticated
+    if (!authLoading && !user) {
+      window.location.href = publicQRPageUrl;
+      return;
+    }
+
     async function fetchManifest() {
+      // Don't fetch if not authenticated
+      if (!user) return;
+
       setLoading(true);
       setError(null);
 
@@ -38,8 +49,10 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
       setLoading(false);
     }
 
-    fetchManifest();
-  }, [projectId]);
+    if (user) {
+      fetchManifest();
+    }
+  }, [projectId, user, authLoading, publicQRPageUrl]);
 
   const handleCopy = async () => {
     if (!manifest) return;
@@ -126,7 +139,7 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="manifest-page">
         <div className="manifest-loading">

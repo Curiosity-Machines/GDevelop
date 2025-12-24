@@ -82,6 +82,16 @@ export function PublicQRPage({ activityId }: PublicQRPageProps) {
             fgColor="#000000"
           />
         </div>
+        <div className="public-qr-footer">
+          <a 
+            href={window.location.origin} 
+            className="public-qr-made-with"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Made with Dopple Studio →
+          </a>
+        </div>
       </div>
     </div>
   );
