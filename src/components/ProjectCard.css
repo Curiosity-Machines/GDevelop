@@ -186,6 +186,7 @@
   padding: 0 20px 20px;
 }
 
+.btn-copy-qr,
 .btn-edit,
 .btn-delete {
   flex: 1;
@@ -195,6 +196,17 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.btn-copy-qr {
+  background: transparent;
+  color: #10b981;
+  border: 1px solid #10b981;
+}
+
+.btn-copy-qr:hover {
+  background: #10b981;
+  color: #fff;
 }
 
 .btn-edit {

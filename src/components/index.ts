@@ -5,3 +5,4 @@ export { Gallery } from './Gallery';
 export { Auth } from './Auth';
 export { ManifestPage } from './ManifestPage';
 export { AccountSettings } from './AccountSettings';
+export { PublicQRPage } from './PublicQRPage';

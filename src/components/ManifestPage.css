@@ -277,6 +277,51 @@
   background: #5558e3;
 }
 
+.public-qr-link-section {
+  margin-top: 12px;
+}
+
+.public-qr-link {
+  display: inline-block;
+  padding: 10px 18px;
+  color: #6366f1;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #6366f1;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.public-qr-link:hover {
+  background: #6366f1;
+  color: white;
+}
+
+.public-qr-page-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.public-qr-page-section h3 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.public-qr-page-section p {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.public-qr-page-section .btn-copy {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 @media (max-width: 600px) {
   .manifest-header {
     flex-direction: column;

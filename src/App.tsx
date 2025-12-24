@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useActivities } from './hooks/useActivities';
-import { Gallery, ProjectForm, Auth, ManifestPage, AccountSettings } from './components';
+import { Gallery, ProjectForm, Auth, ManifestPage, AccountSettings, PublicQRPage } from './components';
 import type { ActivityWithRelations, ActivityFormData } from './types';
 import './App.css';
 
-type View = 'gallery' | 'create' | 'edit' | 'manifest';
+type View = 'gallery' | 'create' | 'edit' | 'manifest' | 'qr';
 
 // Simple URL-based routing
 function useRoute(): { view: View; activityId: string | null } {
@@ -17,6 +17,12 @@ function useRoute(): { view: View; activityId: string | null } {
   useEffect(() => {
     function parseRoute() {
       const path = window.location.pathname;
+
+      // Check for public QR route: /qr/:id
+      const qrMatch = path.match(/^\/qr\/([a-zA-Z0-9-]+)/);
+      if (qrMatch) {
+        return { view: 'qr' as View, activityId: qrMatch[1] };
+      }
 
       // Check for manifest route: /manifest/:id
       const manifestMatch = path.match(/^\/manifest\/([a-zA-Z0-9-]+)/);
@@ -48,6 +54,11 @@ function App() {
   const [view, setView] = useState<View>('gallery');
   const [editingActivity, setEditingActivity] = useState<ActivityWithRelations | null>(null);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
+
+  // If URL is a public QR route, show QR page (no auth required)
+  if (route.view === 'qr' && route.activityId) {
+    return <PublicQRPage activityId={route.activityId} />;
+  }
 
   // If URL is a manifest route, show manifest page (no auth required)
   if (route.view === 'manifest' && route.activityId) {

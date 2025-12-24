@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
-import { activityToDisplayManifest, getManifestApiUrl, type DisplayManifest } from '../lib/manifest';
+import { activityToDisplayManifest, getManifestApiUrl, getPublicQRPageUrl, type DisplayManifest } from '../lib/manifest';
 import './ManifestPage.css';
 
 interface ManifestPageProps {
@@ -15,6 +15,7 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
   const [copied, setCopied] = useState<string | false>(false);
 
   const apiUrl = getManifestApiUrl(projectId);
+  const publicQRPageUrl = getPublicQRPageUrl(projectId);
 
   useEffect(() => {
     async function fetchManifest() {
@@ -65,6 +66,16 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
     try {
       await navigator.clipboard.writeText(`curl "${apiUrl}"`);
       setCopied('curl');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyPublicQRUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(publicQRPageUrl);
+      setCopied('public-qr');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -173,6 +184,11 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
           <button className="btn-action btn-download-qr" onClick={handleDownloadQR}>
             Download QR Code
           </button>
+          <div className="public-qr-link-section">
+            <a href={publicQRPageUrl} target="_blank" rel="noopener noreferrer" className="public-qr-link">
+              View Public QR Page →
+            </a>
+          </div>
         </div>
 
         <div className="manifest-content">
@@ -201,6 +217,16 @@ export function ManifestPage({ projectId }: ManifestPageProps) {
                   {copied === 'curl' ? 'Copied!' : 'Copy'}
                 </button>
               </div>
+            </div>
+          </div>
+          <div className="public-qr-page-section">
+            <h3>Public QR Page</h3>
+            <p>Share this link to display the QR code publicly (no authentication required):</p>
+            <div className="endpoint-row">
+              <code className="endpoint-url">{publicQRPageUrl}</code>
+              <button className="btn-copy" onClick={handleCopyPublicQRUrl}>
+                {copied === 'public-qr' ? 'Copied!' : 'Copy URL'}
+              </button>
             </div>
           </div>
         </div>

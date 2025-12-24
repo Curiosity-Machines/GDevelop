@@ -46,4 +46,10 @@ export function getManifestPageUrl(activityId: string): string {
   return `${baseUrl}/manifest/${activityId}`;
 }
 
+// Generate a public QR page URL for viewing QR code and name
+export function getPublicQRPageUrl(activityId: string): string {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/qr/${activityId}`;
+}
+
 

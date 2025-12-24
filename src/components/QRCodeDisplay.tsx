@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { ProjectManifest } from '../types';
-import { projectToDisplayManifest, getManifestApiUrl, getManifestPageUrl } from '../lib/manifest';
+import { projectToDisplayManifest, getManifestApiUrl, getManifestPageUrl, getPublicQRPageUrl } from '../lib/manifest';
 import './QRCodeDisplay.css';
 
 interface QRCodeDisplayProps {
@@ -17,6 +17,7 @@ export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCod
   const manifest = projectToDisplayManifest(project);
   const apiUrl = getManifestApiUrl(project.id);
   const manifestPageUrl = getManifestPageUrl(project.id);
+  const publicQRPageUrl = getPublicQRPageUrl(project.id);
   const manifestJson = JSON.stringify(manifest, null, 2);
 
   const handleDownloadQR = () => {
@@ -127,6 +128,13 @@ export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCod
             <label className="section-label">View Manifest Page</label>
             <a href={manifestPageUrl} target="_blank" rel="noopener noreferrer" className="manifest-page-link">
               {manifestPageUrl}
+            </a>
+          </div>
+
+          <div className="page-section">
+            <label className="section-label">View Public QR Page</label>
+            <a href={publicQRPageUrl} target="_blank" rel="noopener noreferrer" className="manifest-page-link">
+              {publicQRPageUrl}
             </a>
           </div>
 
