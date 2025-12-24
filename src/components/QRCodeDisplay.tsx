@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { ProjectManifest } from '../types';
-import { projectToDisplayManifest, getManifestApiUrl, getManifestPageUrl, getPublicQRPageUrl } from '../lib/manifest';
+import { projectToDisplayManifest, getManifestApiUrl, getManifestBaseUrl, getManifestPageUrl, getPublicQRPageUrl } from '../lib/manifest';
 import './QRCodeDisplay.css';
 
 interface QRCodeDisplayProps {
@@ -15,7 +15,8 @@ export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCod
   const [copied, setCopied] = useState<string | false>(false);
 
   const manifest = projectToDisplayManifest(project);
-  const apiUrl = getManifestApiUrl(project.id);
+  const qrCodeUrl = getManifestBaseUrl(project.id); // Base URL for QR code (minimal info)
+  const apiUrl = getManifestApiUrl(project.id); // Full URL with format=json for display
   const manifestPageUrl = getManifestPageUrl(project.id);
   const publicQRPageUrl = getPublicQRPageUrl(project.id);
   const manifestJson = JSON.stringify(manifest, null, 2);
@@ -97,7 +98,7 @@ export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCod
       <div className="qr-code-wrapper">
         <QRCodeSVG
           id={`qr-${project.id}`}
-          value={apiUrl}
+          value={qrCodeUrl}
           size={size}
           level="M"
           includeMargin

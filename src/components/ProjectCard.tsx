@@ -78,13 +78,15 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
         </div>
       </div>
 
-      <div className="card-qr-section">
-        <QRCodeDisplay
-          project={project}
-          size={isFocused ? 300 : 200}
-          showDetails={isFocused}
-        />
-      </div>
+      {isFocused && (
+        <div className="card-qr-section">
+          <QRCodeDisplay
+            project={project}
+            size={300}
+            showDetails={true}
+          />
+        </div>
+      )}
 
       <div className="card-actions">
         <button className="btn-copy-qr" onClick={handleCopyPublicQRUrl} title="Copy Public QR Page URL">

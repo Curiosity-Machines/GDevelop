@@ -34,10 +34,15 @@ export function projectToDisplayManifest(project: ActivityWithRelations): Displa
   };
 }
 
-// Generate the API URL for programmatic access
-export function getManifestApiUrl(activityId: string): string {
+// Generate the base API URL (for QR code - minimal information)
+export function getManifestBaseUrl(activityId: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   return `${supabaseUrl}/functions/v1/get-manifest?id=${activityId}`;
+}
+
+// Generate the API URL for programmatic access (with format parameter)
+export function getManifestApiUrl(activityId: string): string {
+  return `${getManifestBaseUrl(activityId)}&format=json`;
 }
 
 // Generate a manifest page URL for viewing in browser
