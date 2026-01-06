@@ -18,6 +18,7 @@ export interface Database {
           icon_url: string | null;
           bundle_path: string | null;
           entry_point: string | null;
+          webview_resolution: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -29,6 +30,7 @@ export interface Database {
           icon_url?: string | null;
           bundle_path?: string | null;
           entry_point?: string | null;
+          webview_resolution?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -40,6 +42,7 @@ export interface Database {
           icon_url?: string | null;
           bundle_path?: string | null;
           entry_point?: string | null;
+          webview_resolution?: number | null;
           created_at?: string;
           updated_at?: string;
         };

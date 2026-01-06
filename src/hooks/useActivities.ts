@@ -29,6 +29,7 @@ function dbToActivityConfig(activity: Activity): SerializableActivityData {
     activityName: activity.name,
     url: activity.url ?? undefined,
     iconPath: activity.icon_url ?? undefined,
+    webViewResolution: activity.webview_resolution ?? undefined,
   };
 
   // If activity has a bundle, use file:// URL format and include bundleUrl
@@ -263,6 +264,7 @@ export function useActivities() {
           icon_url: data.icon || null,
           bundle_path: null,
           entry_point: null,
+          webview_resolution: data.activityConfig.webViewResolution ?? null,
         };
 
         const { data: newActivity, error: insertError } = await supabase
@@ -362,6 +364,10 @@ export function useActivities() {
       let bundlePath = currentActivity?.bundlePath ?? null;
       let entryPoint = data.entryPoint ?? currentActivity?.entryPoint ?? null;
       let iconUrl: string | null = data.icon || currentActivity?.icon || null;
+      const webViewResolution: number | null =
+        data.activityConfig?.webViewResolution ??
+        currentActivity?.activityConfig.webViewResolution ??
+        null;
 
       if (clearBundle && currentActivity?.bundlePath) {
         // Clear the bundle
@@ -402,6 +408,7 @@ export function useActivities() {
           icon_url: iconUrl,
           bundle_path: bundlePath,
           entry_point: entryPoint,
+          webview_resolution: webViewResolution,
         })
         .eq('id', id);
 
@@ -435,6 +442,7 @@ export function useActivities() {
               icon_url: updated.icon ?? null,
               bundle_path: updated.bundlePath ?? null,
               entry_point: updated.entryPoint ?? null,
+              webview_resolution: webViewResolution,
               created_at: new Date(activity.createdAt).toISOString(),
               updated_at: new Date(updated.updatedAt).toISOString(),
             }),

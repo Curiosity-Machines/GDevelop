@@ -6,6 +6,7 @@ export interface DisplayManifest {
   activityName: string;
   url?: string;
   iconPath?: string;
+  webViewResolution?: number;
 }
 
 // Convert DB Activity row to display manifest
@@ -13,6 +14,7 @@ export function activityToDisplayManifest(activity: Activity): DisplayManifest {
   const manifest: DisplayManifest = {
     activityName: activity.name,
     iconPath: activity.icon_url ?? undefined,
+    webViewResolution: activity.webview_resolution ?? undefined,
   };
 
   // Use file:// URL format for bundles

@@ -4,6 +4,7 @@ export interface SerializableActivityData {
   url?: string;
   iconPath?: string;
   bundleUrl?: string;  // URL to download the ZIP bundle (when using local bundle)
+  webViewResolution?: number; // Vuplex CanvasWebViewPrefab.Resolution (px per Unity unit). Default is 1.0
 }
 
 // Default values for creating new activities
@@ -11,6 +12,7 @@ export const defaultActivityData: SerializableActivityData = {
   activityName: 'New Activity',
   url: '',
   iconPath: '',
+  webViewResolution: 1.0,
 };
 
 // Source type for activity content

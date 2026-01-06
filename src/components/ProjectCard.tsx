@@ -46,6 +46,7 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
   // Determine if using bundle or URL
   const isBundle = Boolean(project.bundlePath);
   const displayUrl = project.activityConfig.url;
+  const webViewResolution = project.activityConfig.webViewResolution;
 
   return (
     <div
@@ -75,6 +76,12 @@ export function ProjectCard({ project, onEdit, onDelete, onClick, isFocused = fa
               {displayUrl}
             </a>
           ) : null}
+
+          {webViewResolution != null && (
+            <div className="webview-resolution">
+              WebView Res: {webViewResolution.toFixed(2)}
+            </div>
+          )}
         </div>
       </div>
 

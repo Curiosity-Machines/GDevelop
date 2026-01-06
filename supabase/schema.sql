@@ -22,6 +22,9 @@ CREATE TABLE activities (
   bundle_path TEXT,                -- Path to zip file in storage (e.g., "bundles/<user_id>/<activity_id>.zip")
   entry_point TEXT,                -- Entry point within the zip (e.g., "index.html" or "dist/index.html")
 
+  -- WebView settings
+  webview_resolution REAL,         -- Optional override for Vuplex CanvasWebViewPrefab.Resolution (px per Unity unit)
+
   -- Timestamps
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

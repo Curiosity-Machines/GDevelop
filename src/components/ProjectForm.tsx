@@ -119,6 +119,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
   const [url, setUrl] = useState('');
   const [icon, setIcon] = useState('');
   const [iconError, setIconError] = useState<string | null>(null);
+  const [webViewResolutionOverride, setWebViewResolutionOverride] = useState<string>('');
   const [sourceType, setSourceType] = useState<ActivitySourceType>('url');
   const [bundleFile, setBundleFile] = useState<File | null>(null);
   const [entryPoints, setEntryPoints] = useState<string[]>([]);
@@ -137,6 +138,8 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
       setName(project.name);
       setUrl(project.url || '');
       setIcon(project.icon || '');
+      const res = project.activityConfig.webViewResolution;
+      setWebViewResolutionOverride(res != null && Math.abs(res - 1.0) > 0.0001 ? String(res) : '');
       // Determine source type based on existing data
       if (project.bundlePath) {
         setSourceType('bundle');
@@ -282,10 +285,25 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
       return;
     }
 
+    // Optional WebView resolution override (Vuplex CanvasWebViewPrefab.Resolution)
+    let webViewResolution: number | undefined = undefined;
+    const trimmedRes = webViewResolutionOverride.trim();
+    if (trimmedRes) {
+      const parsed = Number.parseFloat(trimmedRes);
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        const clamped = Math.min(4.0, Math.max(0.25, parsed));
+        // Store only if it differs from the default (1.0)
+        if (Math.abs(clamped - 1.0) > 0.0001) {
+          webViewResolution = clamped;
+        }
+      }
+    }
+
     const activityConfig: SerializableActivityData = {
       activityName: name.trim(),
       url: sourceType === 'url' ? url.trim() || undefined : undefined,
       iconPath: finalIconUrl,
+      webViewResolution,
     };
 
     onSubmit(
@@ -365,6 +383,24 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
               />
             </div>
           )}
+
+          {/* WebView Resolution Override */}
+          <div className="form-group">
+            <label htmlFor="webViewResolution">WebView Resolution Override (px / Unity unit)</label>
+            <input
+              type="number"
+              id="webViewResolution"
+              value={webViewResolutionOverride}
+              onChange={(e) => setWebViewResolutionOverride(e.target.value)}
+              placeholder="1.0 (default)"
+              min={0.25}
+              max={4.0}
+              step={0.05}
+            />
+            <span className="field-hint">
+              Optional. Sets Vuplex CanvasWebViewPrefab.Resolution. Default is 1.0. Values are clamped to 0.25–4.0.
+            </span>
+          </div>
 
           {/* Bundle Upload (shown when sourceType is 'bundle') */}
           {sourceType === 'bundle' && (

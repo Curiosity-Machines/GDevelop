@@ -18,6 +18,7 @@ interface ActivityManifest {
   url?: string;
   iconPath?: string;
   bundleUrl?: string;
+  webViewResolution?: number;
 }
 
 // Database row type
@@ -28,6 +29,7 @@ interface Activity {
   icon_url: string | null;
   bundle_path: string | null;
   entry_point: string | null;
+  webview_resolution: number | null;
 }
 
 // Get the download URL for a bundle ZIP file
@@ -54,6 +56,10 @@ function dbToManifest(activity: Activity): ActivityManifest {
   if (activity.icon_url) {
     manifest.iconPath = activity.icon_url;
   }
+
+  // Always include webViewResolution so clients can see the effective value.
+  // If not overridden in the DB, default to 1.0 (Vuplex CanvasWebViewPrefab default).
+  manifest.webViewResolution = activity.webview_resolution ?? 1.0;
 
   return manifest;
 }
@@ -134,7 +140,7 @@ Deno.serve(async (req) => {
     // Fetch the activity
     const { data: activity, error: activityError } = await supabase
       .from('activities')
-      .select('id, name, url, icon_url, bundle_path, entry_point')
+      .select('id, name, url, icon_url, bundle_path, entry_point, webview_resolution')
       .eq('id', activityId)
       .single();
 
