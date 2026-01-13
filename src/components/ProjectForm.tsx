@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import JSZip from 'jszip';
 import type { ProjectManifest, ProjectFormData, SerializableActivityData, ActivitySourceType, IconSourceType } from '../types';
-import './ProjectForm.css';
 
 // Unity-supported texture formats for UnityWebRequestTexture.GetTexture
 const UNITY_SUPPORTED_EXTENSIONS = ['bmp', 'exr', 'hdr', 'iff', 'jpg', 'jpeg', 'pict', 'png', 'psd', 'tga', 'tiff', 'tif'];
@@ -127,7 +126,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
   const [isParsingZip, setIsParsingZip] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Icon from bundle support
   const [iconSourceType, setIconSourceType] = useState<IconSourceType>('url');
   const [bundleImageFiles, setBundleImageFiles] = useState<string[]>([]);
@@ -167,14 +166,14 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
       // Find all HTML and image files in the zip
       zip.forEach((relativePath, zipEntry) => {
         if (zipEntry.dir) return;
-        
+
         const lowerPath = relativePath.toLowerCase();
-        
+
         // Check for HTML files
         if (lowerPath.endsWith('.html')) {
           htmlFiles.push(relativePath);
         }
-        
+
         // Check for image files
         const ext = lowerPath.split('.').pop();
         if (ext && BUNDLE_IMAGE_EXTENSIONS.includes(ext)) {
@@ -202,10 +201,10 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
         const lowerA = a.toLowerCase();
         const lowerB = b.toLowerCase();
         const iconPriority = ['icon', 'logo', 'favicon'];
-        
+
         const aHasPriority = iconPriority.some(p => lowerA.includes(p));
         const bHasPriority = iconPriority.some(p => lowerB.includes(p));
-        
+
         if (aHasPriority && !bHasPriority) return -1;
         if (!aHasPriority && bHasPriority) return 1;
         return a.localeCompare(b);
@@ -216,7 +215,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
       setBundleFile(file);
       // Auto-select first entry point (index.html if available)
       setSelectedEntryPoint(htmlFiles[0]);
-      
+
       // If images found, default icon source to bundle_asset and select first
       if (imageFiles.length > 0) {
         setIconSourceType('bundle_asset');
@@ -332,13 +331,21 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
   };
 
   return (
-    <form className="project-form" onSubmit={handleSubmit}>
-      <h2>{project ? 'Edit Activity' : 'Create New Activity'}</h2>
+    <form
+      className="bg-white border border-gray-200 rounded-xl p-6 max-w-[700px] mx-auto max-h-[calc(100vh-120px)] overflow-y-auto"
+      onSubmit={handleSubmit}
+    >
+      <h2 className="m-0 mb-6 text-gray-900 text-2xl">
+        {project ? 'Edit Activity' : 'Create New Activity'}
+      </h2>
 
-      <div className="form-section">
-        <div className="section-content">
-          <div className="form-group">
-            <label htmlFor="name">Activity Name *</label>
+      <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+        <div className="p-4 border-t border-gray-200 first:border-t-0">
+          {/* Activity Name */}
+          <div className="mb-4">
+            <label htmlFor="name" className="block mb-1.5 text-gray-600 text-sm font-medium">
+              Activity Name *
+            </label>
             <input
               type="text"
               id="name"
@@ -346,23 +353,32 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
               onChange={(e) => setName(e.target.value)}
               placeholder="My Awesome Activity"
               required
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm transition-colors duration-200 focus:outline-none focus:border-indigo-500 placeholder:text-gray-400"
             />
           </div>
 
           {/* Source Type Toggle */}
-          <div className="form-group">
-            <label>Activity Source</label>
-            <div className="source-toggle">
+          <div className="mb-4">
+            <label className="block mb-1.5 text-gray-600 text-sm font-medium">Activity Source</label>
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
               <button
                 type="button"
-                className={`toggle-btn ${sourceType === 'url' ? 'active' : ''}`}
+                className={`flex-1 px-4 py-2.5 border-none rounded-md text-sm font-medium cursor-pointer transition-all duration-200 ${
+                  sourceType === 'url'
+                    ? 'bg-white text-indigo-500 shadow-sm'
+                    : 'bg-transparent text-gray-500 hover:text-gray-700'
+                }`}
                 onClick={() => setSourceType('url')}
               >
                 🌐 Web URL
               </button>
               <button
                 type="button"
-                className={`toggle-btn ${sourceType === 'bundle' ? 'active' : ''}`}
+                className={`flex-1 px-4 py-2.5 border-none rounded-md text-sm font-medium cursor-pointer transition-all duration-200 ${
+                  sourceType === 'bundle'
+                    ? 'bg-white text-indigo-500 shadow-sm'
+                    : 'bg-transparent text-gray-500 hover:text-gray-700'
+                }`}
                 onClick={() => setSourceType('bundle')}
               >
                 📦 Upload Bundle
@@ -372,21 +388,26 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
 
           {/* URL Input (shown when sourceType is 'url') */}
           {sourceType === 'url' && (
-            <div className="form-group">
-              <label htmlFor="url">Activity URL</label>
+            <div className="mb-4">
+              <label htmlFor="url" className="block mb-1.5 text-gray-600 text-sm font-medium">
+                Activity URL
+              </label>
               <input
                 type="url"
                 id="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://example.com/game"
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm transition-colors duration-200 focus:outline-none focus:border-indigo-500 placeholder:text-gray-400"
               />
             </div>
           )}
 
           {/* WebView Resolution Override */}
-          <div className="form-group">
-            <label htmlFor="webViewResolution">WebView Resolution Override (px / Unity unit)</label>
+          <div className="mb-4">
+            <label htmlFor="webViewResolution" className="block mb-1.5 text-gray-600 text-sm font-medium">
+              WebView Resolution Override (px / Unity unit)
+            </label>
             <input
               type="number"
               id="webViewResolution"
@@ -396,75 +417,92 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
               min={0.25}
               max={4.0}
               step={0.05}
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm transition-colors duration-200 focus:outline-none focus:border-indigo-500 placeholder:text-gray-400"
             />
-            <span className="field-hint">
-              Optional. Sets Vuplex CanvasWebViewPrefab.Resolution. Default is 1.0. Values are clamped to 0.25–4.0.
+            <span className="block mt-1.5 text-gray-400 text-xs">
+              Optional. Sets Vuplex CanvasWebViewPrefab.Resolution. Default is 1.0. Values are clamped to 0.25-4.0.
             </span>
           </div>
 
           {/* Bundle Upload (shown when sourceType is 'bundle') */}
           {sourceType === 'bundle' && (
-            <div className="bundle-section">
+            <div className="mt-2">
               {/* Show existing bundle info */}
               {project?.bundlePath && !bundleFile && (
-                <div className="existing-bundle">
-                  <div className="bundle-info">
-                    <span className="bundle-icon">📦</span>
-                    <div className="bundle-details">
-                      <span className="bundle-label">Current Bundle</span>
-                      <span className="bundle-entry">Entry: {project.entryPoint || 'index.html'}</span>
+                <div className="flex justify-between items-center px-4 py-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📦</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-green-800 text-sm">Current Bundle</span>
+                      <span className="text-xs text-green-700 font-mono">
+                        Entry: {project.entryPoint || 'index.html'}
+                      </span>
                     </div>
                   </div>
-                  <span className="bundle-hint">Upload a new zip to replace</span>
+                  <span className="text-xs text-gray-500 italic">Upload a new zip to replace</span>
                 </div>
               )}
 
               {/* File Upload */}
-              <div className="form-group">
-                <label htmlFor="bundle">
+              <div className="mb-4">
+                <label htmlFor="bundle" className="block mb-1.5 text-gray-600 text-sm font-medium">
                   {project?.bundlePath ? 'Replace Bundle (ZIP)' : 'Upload Bundle (ZIP)'}
                 </label>
-                <div className="file-upload-wrapper">
+                <div className="relative flex items-stretch">
                   <input
                     type="file"
                     id="bundle"
                     ref={fileInputRef}
                     accept=".zip"
                     onChange={handleFileChange}
-                    className="file-input"
+                    className="absolute w-full h-full opacity-0 cursor-pointer z-10"
                   />
-                  <label htmlFor="bundle" className="file-upload-label">
+                  <label
+                    htmlFor="bundle"
+                    className="flex-1 flex items-center justify-center px-4 py-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer transition-all duration-200 hover:border-indigo-500 hover:bg-indigo-50"
+                  >
                     {isParsingZip ? (
-                      <span className="parsing">Analyzing zip...</span>
+                      <span className="text-indigo-500 italic">Analyzing zip...</span>
                     ) : bundleFile ? (
-                      <span className="file-selected">
-                        <span className="file-name">{bundleFile.name}</span>
-                        <span className="file-size">({(bundleFile.size / 1024).toFixed(1)} KB)</span>
+                      <span className="flex items-center gap-2 text-gray-700">
+                        <span className="font-medium">{bundleFile.name}</span>
+                        <span className="text-gray-400 text-sm">
+                          ({(bundleFile.size / 1024).toFixed(1)} KB)
+                        </span>
                       </span>
                     ) : (
-                      <span className="file-placeholder">
-                        <span className="upload-icon">📁</span>
+                      <span className="flex flex-col items-center gap-2 text-gray-500 text-sm">
+                        <span className="text-2xl">📁</span>
                         Click to select or drag & drop a ZIP file
                       </span>
                     )}
                   </label>
                   {bundleFile && (
-                    <button type="button" className="btn-remove-file" onClick={handleRemoveBundle}>
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 flex items-center justify-center bg-red-500 text-white border-none rounded-full text-xs cursor-pointer transition-colors duration-200 hover:bg-red-600"
+                      onClick={handleRemoveBundle}
+                    >
                       ✕
                     </button>
                   )}
                 </div>
-                {zipError && <span className="error-message">{zipError}</span>}
+                {zipError && (
+                  <span className="block mt-2 text-red-600 text-sm">{zipError}</span>
+                )}
               </div>
 
               {/* Entry Point Selection */}
               {entryPoints.length > 0 && (
-                <div className="form-group">
-                  <label htmlFor="entryPoint">Entry Point</label>
+                <div className="mb-4">
+                  <label htmlFor="entryPoint" className="block mb-1.5 text-gray-600 text-sm font-medium">
+                    Entry Point
+                  </label>
                   <select
                     id="entryPoint"
                     value={selectedEntryPoint}
                     onChange={(e) => setSelectedEntryPoint(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm transition-colors duration-200 focus:outline-none focus:border-indigo-500"
                   >
                     {entryPoints.map((entry) => (
                       <option key={entry} value={entry}>
@@ -472,7 +510,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
                       </option>
                     ))}
                   </select>
-                  <span className="field-hint">
+                  <span className="block mt-1.5 text-gray-400 text-xs">
                     Select the HTML file that should load when the activity starts
                   </span>
                 </div>
@@ -481,29 +519,37 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
           )}
 
           {/* Icon Section */}
-          <div className="form-group">
-            <label>Icon</label>
-            
+          <div className="mb-4 last:mb-0">
+            <label className="block mb-1.5 text-gray-600 text-sm font-medium">Icon</label>
+
             {/* Show icon source toggle only when using bundle and bundle has images */}
             {sourceType === 'bundle' && bundleImageFiles.length > 0 && (
-              <div className="icon-source-toggle">
+              <div className="flex gap-1.5 bg-gray-100 p-0.5 rounded-md mb-2.5">
                 <button
                   type="button"
-                  className={`toggle-btn-small ${iconSourceType === 'bundle_asset' ? 'active' : ''}`}
+                  className={`flex-1 px-3 py-1.5 border-none rounded text-xs font-medium cursor-pointer transition-all duration-200 ${
+                    iconSourceType === 'bundle_asset'
+                      ? 'bg-white text-indigo-500 shadow-sm'
+                      : 'bg-transparent text-gray-500 hover:text-gray-700'
+                  }`}
                   onClick={() => setIconSourceType('bundle_asset')}
                 >
                   📦 From Bundle
                 </button>
                 <button
                   type="button"
-                  className={`toggle-btn-small ${iconSourceType === 'url' ? 'active' : ''}`}
+                  className={`flex-1 px-3 py-1.5 border-none rounded text-xs font-medium cursor-pointer transition-all duration-200 ${
+                    iconSourceType === 'url'
+                      ? 'bg-white text-indigo-500 shadow-sm'
+                      : 'bg-transparent text-gray-500 hover:text-gray-700'
+                  }`}
                   onClick={() => setIconSourceType('url')}
                 >
                   🔗 URL
                 </button>
               </div>
             )}
-            
+
             {/* Icon from Bundle dropdown */}
             {sourceType === 'bundle' && iconSourceType === 'bundle_asset' && bundleImageFiles.length > 0 ? (
               <>
@@ -511,7 +557,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
                   id="bundleIcon"
                   value={selectedBundleIcon}
                   onChange={(e) => setSelectedBundleIcon(e.target.value)}
-                  className="bundle-icon-select"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm font-mono transition-colors duration-200 focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">No icon</option>
                   {bundleImageFiles.map((imgPath) => (
@@ -520,7 +566,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
                     </option>
                   ))}
                 </select>
-                <span className="field-hint">
+                <span className="block mt-1.5 text-gray-400 text-xs">
                   Select an image from your bundle to use as the icon
                 </span>
               </>
@@ -532,10 +578,16 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
                   value={icon}
                   onChange={(e) => handleIconChange(e.target.value)}
                   placeholder="https://example.com/icon.png"
-                  className={iconError ? 'input-error' : ''}
+                  className={`w-full px-3 py-2.5 bg-gray-50 border rounded-md text-gray-900 text-sm transition-colors duration-200 focus:outline-none placeholder:text-gray-400 ${
+                    iconError
+                      ? 'border-red-600 bg-red-50 focus:border-red-600'
+                      : 'border-gray-200 focus:border-indigo-500'
+                  }`}
                 />
-                {iconError && <span className="error-message">{iconError}</span>}
-                <span className="field-hint">
+                {iconError && (
+                  <span className="block mt-2 text-red-600 text-sm">{iconError}</span>
+                )}
+                <span className="block mt-1.5 text-gray-400 text-xs">
                   HTTPS or data:image URL. Supported formats: PNG, JPG, BMP, TGA, TIFF, PSD, HDR, EXR
                 </span>
               </>
@@ -544,8 +596,13 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
 
           {/* Icon preview for URL */}
           {iconSourceType === 'url' && icon && !iconError && (
-            <div className="icon-preview">
-              <img src={icon} alt="Icon preview" onError={(e) => (e.currentTarget.style.display = 'none')} />
+            <div className="flex justify-center mb-4">
+              <img
+                src={icon}
+                alt="Icon preview"
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+                className="w-16 h-16 object-contain rounded-lg bg-gray-100 border border-gray-200 p-2"
+              />
             </div>
           )}
         </div>
@@ -553,22 +610,22 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
 
       {/* Upload Progress */}
       {uploadProgress && (
-        <div className="upload-progress-section">
-          <div className="upload-progress-header">
-            <span className="upload-progress-label">
+        <div className="mt-4 p-4 bg-sky-50 border border-sky-200 rounded-lg">
+          <div className="flex justify-between items-center mb-2.5">
+            <span className="font-medium text-sky-700 text-sm">
               {uploadProgress.phase === 'preparing' && '📦 Preparing bundle...'}
               {uploadProgress.phase === 'uploading' && `📤 Uploading files...`}
               {uploadProgress.phase === 'complete' && '✅ Upload complete!'}
             </span>
             {uploadProgress.phase === 'uploading' && uploadProgress.total > 0 && (
-              <span className="upload-progress-count">
+              <span className="text-sm text-sky-600 font-mono">
                 {uploadProgress.current} / {uploadProgress.total} files
               </span>
             )}
           </div>
-          <div className="upload-progress-bar">
+          <div className="h-2 bg-sky-100 rounded overflow-hidden">
             <div
-              className="upload-progress-fill"
+              className="h-full bg-gradient-to-r from-sky-400 to-sky-600 rounded transition-all duration-300"
               style={{
                 width: uploadProgress.total > 0
                   ? `${(uploadProgress.current / uploadProgress.total) * 100}%`
@@ -579,11 +636,20 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
         </div>
       )}
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={!!uploadProgress}>
+      <div className="flex gap-3 justify-end mt-6 pt-5 border-t border-gray-200">
+        <button
+          type="button"
+          className="px-6 py-3 rounded-lg text-base font-medium cursor-pointer transition-all duration-200 bg-transparent text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onCancel}
+          disabled={!!uploadProgress}
+        >
           Cancel
         </button>
-        <button type="submit" className="btn-primary" disabled={isParsingZip || !!uploadProgress || !!iconError}>
+        <button
+          type="submit"
+          className="px-6 py-3 rounded-lg text-base font-medium cursor-pointer transition-all duration-200 bg-indigo-500 text-white border-none hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isParsingZip || !!uploadProgress || !!iconError}
+        >
           {uploadProgress
             ? 'Uploading...'
             : project

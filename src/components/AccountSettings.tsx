@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserIdentity } from '@supabase/supabase-js';
-import './AccountSettings.css';
 
 export function AccountSettings({ onClose }: { onClose: () => void }) {
   const { user, linkIdentity, getUserIdentities, unlinkIdentity } = useAuth();
@@ -11,24 +10,7 @@ export function AccountSettings({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState<string | null>(null);
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadIdentities();
-    
-    // Check for OAuth redirect after linking
-    const urlParams = new URLSearchParams(window.location.search);
-    const provider = urlParams.get('provider');
-    if (provider) {
-      // Clear the URL parameter
-      window.history.replaceState({}, document.title, window.location.pathname);
-      // Reload identities after a short delay to allow Supabase to process
-      setTimeout(() => {
-        loadIdentities();
-        setMessage(`Successfully linked ${provider} account!`);
-      }, 1000);
-    }
-  }, []);
-
-  const loadIdentities = async () => {
+  const loadIdentities = useCallback(async () => {
     setLoading(true);
     setError(null);
     const { identities: userIdentities, error: err } = await getUserIdentities();
@@ -42,7 +24,25 @@ export function AccountSettings({ onClose }: { onClose: () => void }) {
       setIdentities(filteredIdentities);
     }
     setLoading(false);
-  };
+  }, [getUserIdentities]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional data fetching on mount
+    loadIdentities();
+
+    // Check for OAuth redirect after linking
+    const urlParams = new URLSearchParams(window.location.search);
+    const provider = urlParams.get('provider');
+    if (provider) {
+      // Clear the URL parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Reload identities after a short delay to allow Supabase to process
+      setTimeout(() => {
+        loadIdentities();
+        setMessage(`Successfully linked ${provider} account!`);
+      }, 1000);
+    }
+  }, [loadIdentities]);
 
   const handleLinkIdentity = async (provider: 'github') => {
     setLinkingProvider(provider);
@@ -155,49 +155,58 @@ export function AccountSettings({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="account-settings-overlay" onClick={onClose}>
-      <div className="account-settings-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="account-settings-header">
-          <h2>Account Settings</h2>
-          <button className="account-settings-close" onClick={onClose}>
+    <div
+      className="fixed inset-0 flex items-center justify-center z-[1000] p-5 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[600px] max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h2 className="m-0 text-2xl text-[#1a1a2e]">Account Settings</h2>
+          <button
+            className="flex items-center justify-center w-8 h-8 p-0 bg-transparent border-none text-[32px] text-slate-500 rounded cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-[#1a1a2e]"
+            onClick={onClose}
+          >
             ×
           </button>
         </div>
 
-        <div className="account-settings-content">
+        <div className="p-6">
           {user && (
-            <div className="account-info">
-              <h3>Account Information</h3>
-              <p>
-                <strong>Email:</strong> {user.email || 'No email'}
+            <div className="mb-8 pb-6 border-b border-gray-200">
+              <h3 className="m-0 mb-4 text-lg text-[#1a1a2e]">Account Information</h3>
+              <p className="my-2 text-sm text-slate-500">
+                <strong className="font-semibold text-gray-700">Email:</strong> {user.email || 'No email'}
               </p>
-              <p>
-                <strong>Account Created:</strong> {formatRelativeTime(user.created_at, true)}
+              <p className="my-2 text-sm text-slate-500">
+                <strong className="font-semibold text-gray-700">Account Created:</strong> {formatRelativeTime(user.created_at, true)}
               </p>
-              <p>
-                <strong>Last Signed In:</strong> {formatRelativeTime(user.last_sign_in_at, false)}
+              <p className="my-2 text-sm text-slate-500">
+                <strong className="font-semibold text-gray-700">Last Signed In:</strong> {formatRelativeTime(user.last_sign_in_at, false)}
               </p>
             </div>
           )}
 
-          <div className="linked-accounts">
-            <h3>Linked Accounts</h3>
+          <div>
+            <h3 className="m-0 mb-4 text-lg text-[#1a1a2e]">Linked Accounts</h3>
             {loading ? (
               <p>Loading identities...</p>
             ) : (
               <>
-                <div className="identities-list">
+                <div className="mb-8">
                   {identities.map((identity) => (
-                    <div key={identity.id} className="identity-item">
-                      <div className="identity-info">
-                        <span className="identity-provider">{getProviderDisplayName(identity.provider)}</span>
-                        <span className="identity-email">
+                    <div key={identity.id} className="flex justify-between items-center p-4 mb-3 bg-gray-50 rounded-lg">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-sm text-[#1a1a2e]">{getProviderDisplayName(identity.provider)}</span>
+                        <span className="text-[13px] text-slate-500">
                           {identity.identity_data?.email || identity.identity_data?.user_name || 'N/A'}
                         </span>
                       </div>
                       {identities.length > 1 && (
                         <button
-                          className="btn-unlink"
+                          className="px-4 py-2 bg-red-500 text-white text-sm font-medium border-none rounded-md cursor-pointer transition-all duration-200 hover:enabled:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={() => handleUnlinkIdentity(identity)}
                           disabled={identities.length <= 1}
                         >
@@ -208,31 +217,43 @@ export function AccountSettings({ onClose }: { onClose: () => void }) {
                   ))}
                 </div>
 
-                <div className="link-accounts-section">
-                  <h4>Link Additional Accounts</h4>
-                  <p className="link-accounts-description">
+                <div className="pt-6 border-t border-gray-200">
+                  <h4 className="m-0 mb-2 text-base text-[#1a1a2e]">Link Additional Accounts</h4>
+                  <p className="m-0 mb-4 text-sm text-slate-500 leading-relaxed">
                     Link your GitHub account to sign in with either email/password or GitHub. This is useful if you
                     signed up with a different email than your GitHub account.
                   </p>
-                  <div className="link-buttons">
+                  <div className="flex flex-col gap-3">
                     {!isLinked('github') && (
                       <button
-                        className="btn-link btn-link-github"
+                        className="flex items-center justify-center gap-3 px-4 py-3 bg-white text-[#24292e] text-[15px] font-medium border border-gray-200 rounded-lg cursor-pointer transition-all duration-200 hover:enabled:bg-gray-50 hover:enabled:border-[#24292e] hover:enabled:-translate-y-px hover:enabled:shadow-[0_2px_8px_rgba(0,0,0,0.1)] disabled:opacity-60 disabled:cursor-not-allowed"
                         onClick={() => handleLinkIdentity('github')}
                         disabled={!!linkingProvider}
                       >
                         {linkingProvider === 'github' ? 'Linking...' : 'Link GitHub Account'}
                       </button>
                     )}
-                    {isLinked('github') && <p className="all-linked">GitHub account is linked.</p>}
+                    {isLinked('github') && (
+                      <p className="text-sm text-center text-slate-500 p-4 bg-green-50 rounded-lg border border-green-200">
+                        GitHub account is linked.
+                      </p>
+                    )}
                   </div>
                 </div>
               </>
             )}
           </div>
 
-          {error && <div className="account-settings-error">{error}</div>}
-          {message && <div className="account-settings-message">{message}</div>}
+          {error && (
+            <div className="mt-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+              {error}
+            </div>
+          )}
+          {message && (
+            <div className="mt-4 p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg">
+              {message}
+            </div>
+          )}
         </div>
       </div>
     </div>

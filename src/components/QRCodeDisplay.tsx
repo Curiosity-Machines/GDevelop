@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { ProjectManifest } from '../types';
 import { projectToDisplayManifest, getManifestApiUrl, getManifestBaseUrl, getManifestPageUrl, getPublicQRPageUrl } from '../lib/manifest';
-import './QRCodeDisplay.css';
 
 interface QRCodeDisplayProps {
   project: ProjectManifest;
@@ -94,8 +93,8 @@ export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCod
   };
 
   return (
-    <div className="qr-code-display">
-      <div className="qr-code-wrapper">
+    <div className="flex flex-col items-center gap-4">
+      <div className="bg-white rounded-xl p-2 shadow-lg">
         <QRCodeSVG
           id={`qr-${project.id}`}
           value={qrCodeUrl}
@@ -108,60 +107,92 @@ export function QRCodeDisplay({ project, size = 500, showDetails = true }: QRCod
       </div>
 
       {showDetails && (
-        <div className="qr-details">
-          <div className="api-section">
-            <label className="section-label">API Endpoint (for curl/fetch)</label>
-            <div className="api-url-row">
-              <code className="api-url">{apiUrl}</code>
-              <button className="btn-small" onClick={handleCopyApiUrl}>
+        <div className="text-center w-full max-w-[450px]">
+          {/* API Section */}
+          <div className="mb-4 text-left">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">API Endpoint (for curl/fetch)</label>
+            <div className="flex items-center gap-2 mb-2">
+              <code className="flex-1 px-3 py-2 bg-gray-800 text-emerald-500 font-mono text-[0.7rem] rounded-md break-all text-left">{apiUrl}</code>
+              <button
+                className="px-2.5 py-1 bg-indigo-500 text-white border-none rounded font-medium text-[0.7rem] cursor-pointer transition-colors duration-200 hover:bg-indigo-600"
+                onClick={handleCopyApiUrl}
+              >
                 {copied === 'api' ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <div className="curl-row">
-              <code className="curl-command">curl "{apiUrl}"</code>
-              <button className="btn-small" onClick={handleCopyCurl}>
+            <div className="flex items-center gap-2 mb-2">
+              <code className="flex-1 px-3 py-2 bg-gray-800 text-gray-50 font-mono text-[0.7rem] rounded-md break-all text-left">curl "{apiUrl}"</code>
+              <button
+                className="px-2.5 py-1 bg-indigo-500 text-white border-none rounded font-medium text-[0.7rem] cursor-pointer transition-colors duration-200 hover:bg-indigo-600"
+                onClick={handleCopyCurl}
+              >
                 {copied === 'curl' ? 'Copied!' : 'Copy'}
               </button>
             </div>
           </div>
 
-          <div className="page-section">
-            <label className="section-label">View Manifest Page</label>
-            <a href={manifestPageUrl} target="_blank" rel="noopener noreferrer" className="manifest-page-link">
+          {/* Page Section */}
+          <div className="mb-4 text-left">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">View Manifest Page</label>
+            <a
+              href={manifestPageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block px-3 py-2 bg-gray-100 text-indigo-500 font-mono text-[0.7rem] rounded-md break-all no-underline transition-colors duration-200 hover:bg-gray-200"
+            >
               {manifestPageUrl}
             </a>
           </div>
 
-          <div className="page-section">
-            <label className="section-label">View Public QR Page</label>
-            <a href={publicQRPageUrl} target="_blank" rel="noopener noreferrer" className="manifest-page-link">
+          <div className="mb-4 text-left">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">View Public QR Page</label>
+            <a
+              href={publicQRPageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block px-3 py-2 bg-gray-100 text-indigo-500 font-mono text-[0.7rem] rounded-md break-all no-underline transition-colors duration-200 hover:bg-gray-200"
+            >
               {publicQRPageUrl}
             </a>
           </div>
 
-          <div className="qr-actions">
-            <button className="btn-action" onClick={handleDownloadQR}>
+          {/* QR Actions */}
+          <div className="flex gap-2 justify-center flex-wrap mb-3">
+            <button
+              className="px-3.5 py-2 bg-emerald-500 text-white border-none rounded-md text-[0.8rem] font-medium cursor-pointer transition-colors duration-200 hover:bg-emerald-600"
+              onClick={handleDownloadQR}
+            >
               Download QR
             </button>
-            <button className="btn-action btn-json" onClick={() => setShowJson(!showJson)}>
+            <button
+              className="px-3.5 py-2 bg-indigo-500 text-white border-none rounded-md text-[0.8rem] font-medium cursor-pointer transition-colors duration-200 hover:bg-indigo-600"
+              onClick={() => setShowJson(!showJson)}
+            >
               {showJson ? 'Hide JSON' : 'View JSON'}
             </button>
           </div>
 
+          {/* JSON Preview */}
           {showJson && (
-            <div className="json-preview">
-              <div className="json-header">
-                <span>Activity Manifest</span>
-                <div className="json-actions">
-                  <button className="btn-small" onClick={handleCopyJson}>
+            <div className="text-left bg-gray-800 rounded-lg overflow-hidden mt-3">
+              <div className="flex justify-between items-center px-3.5 py-2.5 bg-gray-700 border-b border-gray-600">
+                <span className="text-gray-50 text-[0.85rem] font-medium">Activity Manifest</span>
+                <div className="flex gap-1.5">
+                  <button
+                    className="px-2.5 py-1 bg-indigo-500 text-white border-none rounded font-medium text-[0.7rem] cursor-pointer transition-colors duration-200 hover:bg-indigo-600"
+                    onClick={handleCopyJson}
+                  >
                     {copied === 'json' ? 'Copied!' : 'Copy'}
                   </button>
-                  <button className="btn-small" onClick={handleDownloadJson}>
+                  <button
+                    className="px-2.5 py-1 bg-indigo-500 text-white border-none rounded font-medium text-[0.7rem] cursor-pointer transition-colors duration-200 hover:bg-indigo-600"
+                    onClick={handleDownloadJson}
+                  >
                     Download
                   </button>
                 </div>
               </div>
-              <pre className="json-content">{manifestJson}</pre>
+              <pre className="m-0 p-3.5 text-gray-200 font-mono text-[0.7rem] leading-normal overflow-x-auto max-h-[300px] overflow-y-auto">{manifestJson}</pre>
             </div>
           )}
         </div>

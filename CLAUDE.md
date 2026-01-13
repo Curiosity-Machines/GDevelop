@@ -108,3 +108,24 @@ supabase db push
 # Or manually in SQL editor
 # Run: supabase/migrations/20241216_add_bundle_support.sql
 ```
+
+## OpenSpec
+
+This project uses OpenSpec for spec-driven development. The openspec directory is at the project root (`/openspec/`).
+
+### OpenSpec CLI Limitation
+
+The `openspec` CLI only works when run from the **project root directory**. It does not find the openspec directory when run from `.claude/` or subdirectories, even though it's supposed to search upward.
+
+**For agents running from `.claude/`:**
+- Read openspec files using relative paths: `../openspec/AGENTS.md`, `../openspec/project.md`
+- Run CLI commands from project root: `cd /Users/michaelfinkler/Dev/Dopple/dopple-studio && openspec list`
+
+### Key Commands
+
+```bash
+openspec list              # List active changes (run from project root)
+openspec list --specs      # List specifications
+openspec show [item]       # Display change or spec
+openspec validate --strict # Validate changes
+```

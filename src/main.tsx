@@ -1,13 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { OfflineIndicator, PWAUpdatePrompt } from './components'
+import { router } from './router'
 import './index.css'
-import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <RouterProvider router={router} />
+      <OfflineIndicator />
+      <PWAUpdatePrompt />
     </AuthProvider>
   </StrictMode>,
 )

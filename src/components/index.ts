@@ -6,3 +6,6 @@ export { Auth } from './Auth';
 export { ManifestPage } from './ManifestPage';
 export { AccountSettings } from './AccountSettings';
 export { PublicQRPage } from './PublicQRPage';
+export { ProtectedRoute } from './ProtectedRoute';
+export { OfflineIndicator } from './OfflineIndicator';
+export { PWAUpdatePrompt } from './PWAUpdatePrompt';

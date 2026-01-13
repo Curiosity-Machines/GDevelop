@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { ProjectManifest } from '../types';
 import { ProjectCard } from './ProjectCard';
-import './Gallery.css';
 
 interface GalleryProps {
   projects: ProjectManifest[];
@@ -15,11 +14,14 @@ export function Gallery({ projects, onEdit, onDelete, onCreateNew }: GalleryProp
 
   if (projects.length === 0) {
     return (
-      <div className="gallery-empty">
-        <div className="empty-icon">🎮</div>
-        <h2>No Activities Yet</h2>
-        <p>Create your first activity to generate QR codes with custom configurations</p>
-        <button className="btn-create" onClick={onCreateNew}>
+      <div className="text-center py-15 px-5">
+        <div className="text-6xl mb-6">🎮</div>
+        <h2 className="text-gray-900 m-0 mb-3 text-2xl">No Activities Yet</h2>
+        <p className="text-[#6a6a8a] m-0 mb-8">Create your first activity to generate QR codes with custom configurations</p>
+        <button
+          className="py-3.5 px-8 bg-gradient-to-br from-indigo-500 to-violet-500 text-white border-none rounded-[10px] text-base font-medium cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(99,102,241,0.4)]"
+          onClick={onCreateNew}
+        >
           Create Activity
         </button>
       </div>
@@ -27,13 +29,13 @@ export function Gallery({ projects, onEdit, onDelete, onCreateNew }: GalleryProp
   }
 
   return (
-    <div className="gallery">
-      <div className="gallery-header">
-        <h2>Your Activities</h2>
-        <span className="project-count">{projects.length} activit{projects.length !== 1 ? 'ies' : 'y'}</span>
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="m-0 text-gray-900 text-2xl">Your Activities</h2>
+        <span className="text-[#6a6a8a] text-sm">{projects.length} activit{projects.length !== 1 ? 'ies' : 'y'}</span>
       </div>
 
-      <div className={`gallery-grid ${focusedProject ? 'blurred' : ''}`}>
+      <div className={`grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6 transition-[filter] duration-300 ease-in-out ${focusedProject ? 'blur-[8px] pointer-events-none' : ''}`}>
         {projects.map((project) => (
           <ProjectCard
             key={project.id}
@@ -46,8 +48,8 @@ export function Gallery({ projects, onEdit, onDelete, onCreateNew }: GalleryProp
       </div>
 
       {focusedProject && (
-        <div className="gallery-overlay" onClick={() => setFocusedProject(null)}>
-          <div className="focused-card-container" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[4px] flex items-center justify-center z-[1000] p-5 animate-[fadeIn_0.2s_ease-out]">
+          <div className="relative w-full max-w-[450px] animate-[scaleIn_0.3s_cubic-bezier(0.16,1,0.3,1)]" onClick={(e) => e.stopPropagation()}>
             <ProjectCard
               project={focusedProject}
               onEdit={(p) => {
@@ -60,8 +62,11 @@ export function Gallery({ projects, onEdit, onDelete, onCreateNew }: GalleryProp
               }}
               isFocused={true}
             />
-            <button className="btn-close-focus" onClick={() => setFocusedProject(null)}>
-              ×
+            <button
+              className="absolute -top-[15px] -right-[15px] w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-600 text-2xl flex items-center justify-center cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.1)] z-10 transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 hover:scale-110"
+              onClick={() => setFocusedProject(null)}
+            >
+              x
             </button>
           </div>
         </div>
