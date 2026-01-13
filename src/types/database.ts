@@ -19,6 +19,7 @@ export interface Database {
           bundle_path: string | null;
           entry_point: string | null;
           webview_resolution: number | null;
+          version: number;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +32,7 @@ export interface Database {
           bundle_path?: string | null;
           entry_point?: string | null;
           webview_resolution?: number | null;
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +45,7 @@ export interface Database {
           bundle_path?: string | null;
           entry_point?: string | null;
           webview_resolution?: number | null;
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };

@@ -31,9 +31,11 @@ const mockProject: ProjectManifest = {
   name: 'Test Activity',
   url: 'https://example.com',
   icon: 'https://example.com/icon.png',
+  version: 1,
   activityConfig: {
     activityName: 'Test Activity',
     url: 'https://example.com',
+    version: 1,
   },
   createdAt: Date.now(),
   updatedAt: Date.now(),
@@ -44,9 +46,11 @@ const mockProject2: ProjectManifest = {
   name: 'Second Activity',
   url: 'https://example2.com',
   icon: 'https://example2.com/icon.png',
+  version: 1,
   activityConfig: {
     activityName: 'Second Activity',
     url: 'https://example2.com',
+    version: 1,
   },
   createdAt: Date.now(),
   updatedAt: Date.now(),

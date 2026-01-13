@@ -48,6 +48,7 @@ describe('manifest utilities', () => {
         bundle_path: null,
         entry_point: null,
         webview_resolution: null,
+        version: 1,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       }
@@ -59,6 +60,7 @@ describe('manifest utilities', () => {
         url: 'https://example.com/app',
         iconPath: 'https://example.com/icon.png',
         webViewResolution: undefined,
+        version: 1,
       })
     })
 
@@ -72,6 +74,7 @@ describe('manifest utilities', () => {
         bundle_path: 'user-id/test-id/bundle.zip',
         entry_point: 'index.html',
         webview_resolution: 2.0,
+        version: 1,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       }
@@ -83,6 +86,7 @@ describe('manifest utilities', () => {
         url: 'file://index.html',
         iconPath: 'https://example.com/icon.png',
         webViewResolution: 2.0,
+        version: 1,
       })
     })
 
@@ -96,6 +100,7 @@ describe('manifest utilities', () => {
         bundle_path: null,
         entry_point: null,
         webview_resolution: null,
+        version: 1,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       }
@@ -106,6 +111,7 @@ describe('manifest utilities', () => {
         activityName: 'Empty Activity',
         iconPath: undefined,
         webViewResolution: undefined,
+        version: 1,
       })
     })
 
@@ -119,6 +125,7 @@ describe('manifest utilities', () => {
         bundle_path: 'user-id/test-id/bundle.zip',
         entry_point: 'index.html',
         webview_resolution: null,
+        version: 1,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       }
@@ -138,10 +145,12 @@ describe('manifest utilities', () => {
         icon: 'https://example.com/icon.png',
         bundlePath: undefined,
         entryPoint: undefined,
+        version: 1,
         activityConfig: {
           activityName: 'Test Project',
           url: 'https://example.com',
           iconPath: 'https://example.com/icon.png',
+          version: 1,
         },
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -153,6 +162,7 @@ describe('manifest utilities', () => {
         activityName: 'Test Project',
         url: 'https://example.com',
         iconPath: 'https://example.com/icon.png',
+        version: 1,
       })
     })
 
@@ -164,8 +174,10 @@ describe('manifest utilities', () => {
         icon: undefined,
         bundlePath: undefined,
         entryPoint: undefined,
+        version: 1,
         activityConfig: {
           activityName: 'Empty Project',
+          version: 1,
         },
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -177,6 +189,7 @@ describe('manifest utilities', () => {
         activityName: 'Empty Project',
         url: undefined,
         iconPath: undefined,
+        version: 1,
       })
     })
   })

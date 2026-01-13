@@ -13,14 +13,21 @@ export interface ActivityWithRelations {
   icon?: string;
   bundlePath?: string;
   entryPoint?: string;
+  version: number;
   activityConfig: SerializableActivityData;
   createdAt: number;
   updatedAt: number;
 }
 
-// Form data for creating/updating
-export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt'> & {
+// Activity config for form input (version is optional since it's managed by DB)
+type ActivityFormConfig = Omit<SerializableActivityData, 'version'> & {
+  version?: number;
+};
+
+// Form data for creating/updating (version is managed by DB, not user input)
+export type ActivityFormData = Omit<ActivityWithRelations, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'activityConfig'> & {
   iconBundlePath?: string;  // Path to icon file within the bundle ZIP (e.g., "assets/icon.png")
+  activityConfig: ActivityFormConfig;
 };
 
 // Convert DB row to SerializableActivityData
@@ -30,6 +37,7 @@ function dbToActivityConfig(activity: Activity): SerializableActivityData {
     url: activity.url ?? undefined,
     iconPath: activity.icon_url ?? undefined,
     webViewResolution: activity.webview_resolution ?? undefined,
+    version: activity.version,
   };
 
   // If activity has a bundle, use file:// URL format and include bundleUrl
@@ -37,7 +45,7 @@ function dbToActivityConfig(activity: Activity): SerializableActivityData {
     config.url = `file://${activity.entry_point}`;
     config.bundleUrl = getBundleDownloadUrl(activity.bundle_path);
   }
-  
+
   return config;
 }
 
@@ -116,6 +124,7 @@ export function useActivities() {
       icon: row.icon_url ?? undefined,
       bundlePath: row.bundle_path ?? undefined,
       entryPoint: row.entry_point ?? undefined,
+      version: row.version,
       activityConfig: dbToActivityConfig(row),
       createdAt: new Date(row.created_at).getTime(),
       updatedAt: new Date(row.updated_at).getTime(),
@@ -327,6 +336,7 @@ export function useActivities() {
           icon: iconUrl ?? undefined,
           bundlePath: bundlePath ?? undefined,
           entryPoint: entryPoint ?? undefined,
+          version: newActivity.version,
           activityConfig: dbToActivityConfig({
             ...newActivity,
             bundle_path: bundlePath,
@@ -400,7 +410,7 @@ export function useActivities() {
         console.warn('Cannot change icon from bundle without re-uploading the bundle');
       }
 
-      const { error: updateError } = await supabase
+      const { data: updatedRow, error: updateError } = await supabase
         .from('activities')
         .update({
           name: data.name,
@@ -410,42 +420,31 @@ export function useActivities() {
           entry_point: entryPoint,
           webview_resolution: webViewResolution,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
-      if (updateError) {
-        setError(updateError.message);
+      if (updateError || !updatedRow) {
+        setError(updateError?.message || 'Failed to update activity');
         return;
       }
 
-      // Update local state
+      // Update local state with the new version from the database
       setActivities((prev) =>
         prev.map((activity) => {
           if (activity.id !== id) return activity;
-          
-          const updated = {
-            ...activity,
-            name: data.name ?? activity.name,
-            url: bundlePath ? undefined : data.url,
-            icon: iconUrl ?? undefined,
-            bundlePath: bundlePath ?? undefined,
-            entryPoint: entryPoint ?? undefined,
-            updatedAt: Date.now(),
-          };
-          
+
           return {
-            ...updated,
-            activityConfig: dbToActivityConfig({
-              id: activity.id,
-              user_id: user.id,
-              name: updated.name,
-              url: updated.url ?? null,
-              icon_url: updated.icon ?? null,
-              bundle_path: updated.bundlePath ?? null,
-              entry_point: updated.entryPoint ?? null,
-              webview_resolution: webViewResolution,
-              created_at: new Date(activity.createdAt).toISOString(),
-              updated_at: new Date(updated.updatedAt).toISOString(),
-            }),
+            id: updatedRow.id,
+            name: updatedRow.name,
+            url: updatedRow.bundle_path ? undefined : (updatedRow.url ?? undefined),
+            icon: updatedRow.icon_url ?? undefined,
+            bundlePath: updatedRow.bundle_path ?? undefined,
+            entryPoint: updatedRow.entry_point ?? undefined,
+            version: updatedRow.version,
+            activityConfig: dbToActivityConfig(updatedRow),
+            createdAt: new Date(updatedRow.created_at).getTime(),
+            updatedAt: new Date(updatedRow.updated_at).getTime(),
           };
         })
       );

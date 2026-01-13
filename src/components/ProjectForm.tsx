@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import JSZip from 'jszip';
-import type { ProjectManifest, ProjectFormData, SerializableActivityData, ActivitySourceType, IconSourceType } from '../types';
+import type { ProjectManifest, ProjectFormData, ActivityFormConfig, ActivitySourceType, IconSourceType } from '../types';
 
 // Unity-supported texture formats for UnityWebRequestTexture.GetTexture
 const UNITY_SUPPORTED_EXTENSIONS = ['bmp', 'exr', 'hdr', 'iff', 'jpg', 'jpeg', 'pict', 'png', 'psd', 'tga', 'tiff', 'tif'];
@@ -298,7 +298,7 @@ export function ProjectForm({ project, onSubmit, onCancel, uploadProgress }: Pro
       }
     }
 
-    const activityConfig: SerializableActivityData = {
+    const activityConfig: ActivityFormConfig = {
       activityName: name.trim(),
       url: sourceType === 'url' ? url.trim() || undefined : undefined,
       iconPath: finalIconUrl,

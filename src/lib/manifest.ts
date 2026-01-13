@@ -7,6 +7,7 @@ export interface DisplayManifest {
   url?: string;
   iconPath?: string;
   webViewResolution?: number;
+  version: number;
 }
 
 // Convert DB Activity row to display manifest
@@ -15,6 +16,7 @@ export function activityToDisplayManifest(activity: Activity): DisplayManifest {
     activityName: activity.name,
     iconPath: activity.icon_url ?? undefined,
     webViewResolution: activity.webview_resolution ?? undefined,
+    version: activity.version,
   };
 
   // Use file:// URL format for bundles
@@ -33,6 +35,7 @@ export function projectToDisplayManifest(project: ActivityWithRelations): Displa
     activityName: project.name,
     url: project.activityConfig.url,
     iconPath: project.icon,
+    version: project.version,
   };
 }
 

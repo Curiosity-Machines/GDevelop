@@ -30,9 +30,11 @@ const mockProject: ProjectManifest = {
   name: 'Test Activity',
   url: 'https://example.com/app',
   icon: 'https://example.com/icon.png',
+  version: 1,
   activityConfig: {
     activityName: 'Test Activity',
     url: 'https://example.com/app',
+    version: 1,
   },
   createdAt: Date.now(),
   updatedAt: Date.now(),

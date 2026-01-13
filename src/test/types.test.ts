@@ -21,6 +21,7 @@ describe('types', () => {
     it('can be created with minimal data', () => {
       const data: SerializableActivityData = {
         activityName: 'Test Activity',
+        version: 1,
       }
 
       expect(data.activityName).toBe('Test Activity')
@@ -36,6 +37,7 @@ describe('types', () => {
         iconPath: 'https://example.com/icon.png',
         bundleUrl: 'https://storage.example.com/bundle.zip',
         webViewResolution: 2.0,
+        version: 1,
       }
 
       expect(data.activityName).toBe('Full Activity')
@@ -51,8 +53,10 @@ describe('types', () => {
       const activity: ActivityWithRelations = {
         id: 'test-id',
         name: 'Test Activity',
+        version: 1,
         activityConfig: {
           activityName: 'Test Activity',
+          version: 1,
         },
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -70,9 +74,11 @@ describe('types', () => {
         name: 'Bundle Activity',
         bundlePath: 'user-id/activity-id',
         entryPoint: 'index.html',
+        version: 1,
         activityConfig: {
           activityName: 'Bundle Activity',
           url: 'file://index.html',
+          version: 1,
         },
         createdAt: Date.now(),
         updatedAt: Date.now(),

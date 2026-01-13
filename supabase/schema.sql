@@ -25,6 +25,9 @@ CREATE TABLE activities (
   -- WebView settings
   webview_resolution REAL,         -- Optional override for Vuplex CanvasWebViewPrefab.Resolution (px per Unity unit)
 
+  -- Versioning (auto-incremented on update)
+  version INTEGER NOT NULL DEFAULT 1,
+
   -- Timestamps
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -121,3 +124,17 @@ CREATE TRIGGER update_activities_updated_at
   BEFORE UPDATE ON activities
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Auto-increment version on update
+CREATE OR REPLACE FUNCTION increment_activity_version()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.version := OLD.version + 1;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER activity_version_increment
+  BEFORE UPDATE ON activities
+  FOR EACH ROW
+  EXECUTE FUNCTION increment_activity_version();
