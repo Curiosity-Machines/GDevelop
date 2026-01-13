@@ -1,0 +1,72 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL to test against'
+        required: false
+        default: 'https://dopple-studio.pages.dev'
+
+# Only run one e2e test at a time per PR
+concurrency:
+  group: e2e-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for Cloudflare Pages deployment
+        if: github.event_name == 'pull_request'
+        uses: WalshyDev/cf-pages-await@v1
+        id: cf-await
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          project: dopple-studio
+          commitHash: ${{ github.event.pull_request.head.sha }}
+          timeout: 300
+
+      - name: Run E2E tests
+        run: npx playwright test --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.cf-await.outputs.url || inputs.base_url || 'https://dopple-studio.pages.dev' }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test traces
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-traces
+          path: test-results/
+          retention-days: 7
