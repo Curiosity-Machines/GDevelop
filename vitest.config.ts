@@ -12,6 +12,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    exclude: ['**/node_modules/**', '**/e2e/**'],
     alias: {
       'virtual:pwa-register/react': path.resolve(__dirname, './src/test/__mocks__/pwaRegister.ts'),
     },
