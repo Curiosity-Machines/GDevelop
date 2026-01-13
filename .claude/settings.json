@@ -65,8 +65,8 @@
       "Grep(*)",
       "Skill(*)",
       "Task(*)",
-      "WebSearch(*)",
-      "WebFetch(*)"
+      "WebSearch",
+      "WebFetch"
     ],
     "deny": [
       "Bash(curl:*)",
