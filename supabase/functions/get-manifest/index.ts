@@ -19,6 +19,7 @@ interface ActivityManifest {
   iconPath?: string;
   bundleUrl?: string;
   webViewResolution?: number;
+  version: number;
 }
 
 // Database row type
@@ -30,6 +31,7 @@ interface Activity {
   bundle_path: string | null;
   entry_point: string | null;
   webview_resolution: number | null;
+  version: number;
 }
 
 // Get the download URL for a bundle ZIP file
@@ -43,6 +45,7 @@ function dbToManifest(activity: Activity): ActivityManifest {
   const manifest: ActivityManifest = {
     projectId: activity.id,
     activityName: activity.name,
+    version: activity.version,
   };
 
   // Use file:// URL format for bundles, include bundleUrl for download
@@ -140,7 +143,7 @@ Deno.serve(async (req) => {
     // Fetch the activity
     const { data: activity, error: activityError } = await supabase
       .from('activities')
-      .select('id, name, url, icon_url, bundle_path, entry_point, webview_resolution')
+      .select('id, name, url, icon_url, bundle_path, entry_point, webview_resolution, version')
       .eq('id', activityId)
       .single();
 
