@@ -28,6 +28,7 @@ export type TeamState = {|
   onCreateMembers: (quantity: number) => Promise<void>,
   onActivateMembers: (userIds: string[], activate: boolean) => Promise<void>,
   onSetAdmin: (email: string, activate: boolean) => Promise<void>,
+  onSetMember: (email: string, activate: boolean) => Promise<void>,
   onChangeMemberPassword: (
     userId: string,
     newPassword: string
@@ -52,6 +53,7 @@ export const initialTeamState = {
   onActivateMembers: async () => {},
   onRefreshAdmins: async () => {},
   onSetAdmin: async () => {},
+  onSetMember: async () => {},
   onChangeMemberPassword: async () => {},
   onEditUser: async () => {},
 };

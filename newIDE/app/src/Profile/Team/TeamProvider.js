@@ -20,6 +20,7 @@ import {
   changeTeamMemberPassword,
   activateTeamMembers,
   setUserAsAdmin,
+  setUserAsMember,
   editUser,
   type EditUserChanges,
 } from '../../Utils/GDevelopServices/User';
@@ -310,6 +311,19 @@ const TeamProvider = ({ children }: Props): React.Node => {
     [team, getAuthorizationHeader, adminUserId]
   );
 
+  const onSetMember = React.useCallback(
+    async (email: string, activate: boolean) => {
+      if (!team || !adminUserId) return;
+      await setUserAsMember(getAuthorizationHeader, {
+        teamId: team.id,
+        email,
+        activate,
+        adminUserId,
+      });
+    },
+    [team, getAuthorizationHeader, adminUserId]
+  );
+
   const onDeleteGroup = React.useCallback(
     async (group: TeamGroup) => {
       if (!adminUserId || !team) return;
@@ -386,6 +400,7 @@ const TeamProvider = ({ children }: Props): React.Node => {
         onChangeMemberPassword,
         onActivateMembers,
         onSetAdmin,
+        onSetMember,
       }}
     >
       {children}

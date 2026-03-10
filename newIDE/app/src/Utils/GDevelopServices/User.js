@@ -529,6 +529,31 @@ export const createTeamMembers = async (
   });
 };
 
+export const setUserAsMember = async (
+  getAuthorizationHeader: () => Promise<string>,
+  {
+    email,
+    activate,
+    teamId,
+    adminUserId,
+  }: {|
+    email: string,
+    activate: boolean,
+    teamId: string,
+    adminUserId: string,
+  |}
+) => {
+  const authorizationHeader = await getAuthorizationHeader();
+  await client.post(
+    `/team/${teamId}/action/set-member`,
+    { email, activate },
+    {
+      params: { userId: adminUserId },
+      headers: { Authorization: authorizationHeader },
+    }
+  );
+};
+
 export const setUserAsAdmin = async (
   getAuthorizationHeader: () => Promise<string>,
   {
