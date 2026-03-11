@@ -52,7 +52,11 @@ import { selectMessageByLocale } from '../../../../../Utils/i18n/MessageByLocale
 import TextButton from '../../../../../UI/TextButton';
 import Chip from '../../../../../UI/Chip';
 import { SubscriptionContext } from '../../../../../Profile/Subscription/SubscriptionContext';
-import { type EditUserChanges } from '../../../../../Utils/GDevelopServices/User';
+import {
+  type EditUserChanges,
+  getUserPublicProfilesByIds,
+  type UserPublicProfileByIds,
+} from '../../../../../Utils/GDevelopServices/User';
 
 const styles = {
   selectedMembersControlsContainer: {
@@ -149,13 +153,19 @@ const ManageEducationAccountDialog = ({
     isArchivedAccountsSectionOpen,
     setIsArchivedAccountsSectionOpen,
   ] = React.useState<boolean>(false);
+  const [
+    invitationPublicProfiles,
+    setInvitationPublicProfiles,
+  ] = React.useState<UserPublicProfileByIds>({});
   const {
     groups,
     team,
     admins,
     members,
     memberships,
+    invitations,
     onRefreshMembers,
+    onRefreshInvitations,
     getAvailableSeats,
     onCreateMembers,
     onChangeMemberPassword,
@@ -175,6 +185,29 @@ const ManageEducationAccountDialog = ({
       })();
     },
     [credentialsCopySuccess]
+  );
+
+  React.useEffect(
+    () => {
+      (async () => {
+        if (!invitations || invitations.length === 0) {
+          setInvitationPublicProfiles({});
+          return;
+        }
+        try {
+          const profiles = await getUserPublicProfilesByIds(
+            invitations.map(inv => inv.userId)
+          );
+          setInvitationPublicProfiles(profiles);
+        } catch (error) {
+          console.error(
+            'An error occurred while fetching invitation profiles:',
+            error
+          );
+        }
+      })();
+    },
+    [invitations]
   );
 
   const onEditTeamMember = React.useCallback(
@@ -314,8 +347,9 @@ const ManageEducationAccountDialog = ({
     async (email: string) => {
       await onSetMember(email, true);
       await onRefreshMembers();
+      await onRefreshInvitations();
     },
-    [onSetMember, onRefreshMembers]
+    [onSetMember, onRefreshMembers, onRefreshInvitations]
   );
 
   const onRemoveTeamMember = React.useCallback(
@@ -630,6 +664,35 @@ const ManageEducationAccountDialog = ({
                     isCreatingMembers={isCreatingMembers}
                     onCreateStudentAccounts={onCreateTeamMembers}
                   />
+                )}
+                {invitations && invitations.length > 0 && (
+                  <>
+                    <Divider />
+                    <Text size="sub-title" noMargin>
+                      <Trans>Pending invitations</Trans>
+                    </Text>
+                    <Column noMargin>
+                      {invitations.map(invitation => {
+                        const publicProfile =
+                          invitationPublicProfiles[invitation.userId];
+                        return (
+                          <UserLine
+                            key={invitation.userId}
+                            username={
+                              publicProfile ? publicProfile.username : null
+                            }
+                            fullName={null}
+                            email={invitation.email}
+                            level={null}
+                            onDelete={async () => {
+                              await onSetMember(invitation.email, false);
+                              await onRefreshInvitations();
+                            }}
+                          />
+                        );
+                      })}
+                    </Column>
+                  </>
                 )}
                 {(!hasNoTeamMembers || !hasNoActiveTeamMembers) && (
                   <ColumnStackLayout noMargin>

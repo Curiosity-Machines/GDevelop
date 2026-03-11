@@ -13,6 +13,7 @@ import {
   type Notification,
 } from '../../Utils/GDevelopServices/Notification';
 import GDevelopThemeContext from '../Theme/GDevelopThemeContext';
+import TeamInvitationDialog from '../Notification/TeamInvitationDialog';
 
 const styles = {
   notificationListContainer: {
@@ -35,6 +36,10 @@ const NotificationChip = (props: Props): null | React.Node => {
     onRefreshNotifications,
   } = React.useContext(AuthenticatedUserContext);
   const [anchorEl, setAnchorEl] = React.useState(null);
+  const [pendingTeamInvitation, setPendingTeamInvitation] = React.useState<{|
+    teamId: string,
+    notificationId: string,
+  |} | null>(null);
   const isThereASingleUnseenNotification = React.useMemo<boolean>(
     () =>
       !!notifications &&
@@ -74,6 +79,14 @@ const NotificationChip = (props: Props): null | React.Node => {
   const onCloseNotificationList = React.useCallback(() => {
     setAnchorEl(null);
   }, []);
+
+  const onOpenTeamInvitationDialog = React.useCallback(
+    (teamId: string, notificationId: string) => {
+      setPendingTeamInvitation({ teamId, notificationId });
+      setAnchorEl(null);
+    },
+    []
+  );
 
   if (!profile || !notifications) return null;
 
@@ -115,9 +128,20 @@ const NotificationChip = (props: Props): null | React.Node => {
             onMarkNotificationAsSeen={onMarkNotificationAsSeen}
             canMarkAllAsRead={isThereASingleUnseenNotification}
             onCloseNotificationList={onCloseNotificationList}
+            onOpenTeamInvitationDialog={onOpenTeamInvitationDialog}
           />
         </Paper>
       </Popover>
+      {pendingTeamInvitation && (
+        <TeamInvitationDialog
+          teamId={pendingTeamInvitation.teamId}
+          notificationId={pendingTeamInvitation.notificationId}
+          onClose={() => setPendingTeamInvitation(null)}
+          getAuthorizationHeader={getAuthorizationHeader}
+          userId={profile.id}
+          onRefreshNotifications={onRefreshNotifications}
+        />
+      )}
     </>
   );
 };

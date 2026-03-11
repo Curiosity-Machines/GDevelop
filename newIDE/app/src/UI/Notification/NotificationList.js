@@ -19,6 +19,7 @@ type Props = {|
   canMarkAllAsRead: boolean,
   onMarkNotificationAsSeen: Notification => Promise<void>,
   onCloseNotificationList: () => void,
+  onOpenTeamInvitationDialog?: (teamId: string, notificationId: string) => void,
 |};
 
 const notificationsPreviewCount = 5;
@@ -29,6 +30,7 @@ const NotificationList = ({
   canMarkAllAsRead,
   onMarkNotificationAsSeen,
   onCloseNotificationList,
+  onOpenTeamInvitationDialog,
 }: Props): React.Node => {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [showAll, setShowAll] = React.useState<boolean>(false);
@@ -99,6 +101,7 @@ const NotificationList = ({
                       onMarkNotificationAsSeen={() => {
                         markNotificationAsSeen(notification);
                       }}
+                      onOpenTeamInvitationDialog={onOpenTeamInvitationDialog}
                     />
                   ))
                 ) : (

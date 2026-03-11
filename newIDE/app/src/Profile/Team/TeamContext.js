@@ -5,6 +5,7 @@ import {
   type TeamGroup,
   type User,
   type TeamMembership,
+  type TeamInvitation,
   type EditUserChanges,
 } from '../../Utils/GDevelopServices/User';
 import { type CloudProjectWithUserAccessInfo } from '../../Utils/GDevelopServices/Project';
@@ -15,6 +16,8 @@ export type TeamState = {|
   members: ?Array<User>,
   admins: ?Array<User>,
   memberships: ?Array<TeamMembership>,
+  invitations: ?Array<TeamInvitation>,
+  onRefreshInvitations: () => Promise<void>,
   onChangeGroupName: (group: TeamGroup, newName: string) => Promise<void>,
   onChangeUserGroup: (user: User, group: TeamGroup) => Promise<void>,
   onListUserProjects: (
@@ -42,6 +45,8 @@ export const initialTeamState = {
   members: null,
   admins: null,
   memberships: null,
+  invitations: null,
+  onRefreshInvitations: async () => {},
   onChangeGroupName: async () => {},
   onChangeUserGroup: async () => {},
   onListUserProjects: async (): Promise<Array<empty>> => [],

@@ -11,6 +11,7 @@ import {
   type Team,
   type TeamGroup,
   type TeamMembership,
+  type TeamInvitation,
   type User,
   updateUserGroup,
   deleteGroup,
@@ -21,6 +22,7 @@ import {
   activateTeamMembers,
   setUserAsAdmin,
   setUserAsMember,
+  listTeamInvitations,
   editUser,
   type EditUserChanges,
 } from '../../Utils/GDevelopServices/User';
@@ -43,6 +45,9 @@ const TeamProvider = ({ children }: Props): React.Node => {
   const [members, setMembers] = React.useState<?(User[])>(null);
   const [admins, setAdmins] = React.useState<?(User[])>(null);
   const [memberships, setMemberships] = React.useState<?(TeamMembership[])>(
+    null
+  );
+  const [invitations, setInvitations] = React.useState<?(TeamInvitation[])>(
     null
   );
 
@@ -229,6 +234,30 @@ const TeamProvider = ({ children }: Props): React.Node => {
     [fetchMemberships]
   );
 
+  const fetchInvitations = React.useCallback(
+    async () => {
+      if (!team || !adminUserId) return;
+
+      try {
+        const teamInvitations = await listTeamInvitations(
+          getAuthorizationHeader,
+          { userId: adminUserId, teamId: team.id }
+        );
+        setInvitations(teamInvitations);
+      } catch (error) {
+        console.error('An error occurred while fetching invitations:', error);
+      }
+    },
+    [team, getAuthorizationHeader, adminUserId]
+  );
+
+  React.useEffect(
+    () => {
+      fetchInvitations();
+    },
+    [fetchInvitations]
+  );
+
   const onChangeGroupName = React.useCallback(
     async (group: TeamGroup, newName: string) => {
       if (!team || !adminUserId || !groups) return;
@@ -387,6 +416,7 @@ const TeamProvider = ({ children }: Props): React.Node => {
         admins,
         members,
         memberships,
+        invitations,
         onEditUser,
         onChangeGroupName,
         onChangeUserGroup,
@@ -395,6 +425,7 @@ const TeamProvider = ({ children }: Props): React.Node => {
         onCreateGroup,
         onRefreshMembers,
         onRefreshAdmins,
+        onRefreshInvitations: fetchInvitations,
         getAvailableSeats,
         onCreateMembers,
         onChangeMemberPassword,
