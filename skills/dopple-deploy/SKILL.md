@@ -119,3 +119,45 @@ channel = "#qr-f3st-26"    # Slack channel for deploy notifications (optional)
 ### Slack
 
 No configuration needed. The skill detects Slack MCP in the Claude Code/Codex session automatically. If connected, it posts to the channel specified in `dopple.toml` (or asks the user which channel). If not connected, it returns the URLs for the user to share manually.
+
+## Skill Invocation
+
+The CLI is compiled at `scripts/dopple/dist/cli.js` relative to this skill's directory.
+
+```bash
+# Set required env var (the Supabase project URL)
+export SUPABASE_URL="https://onljswkegixyjjhpcldn.supabase.co"
+
+# Check auth
+node <skill-path>/scripts/dopple/dist/cli.js whoami --token "$DOPPLE_TOKEN"
+
+# Deploy (default: skip smoke test in agent environments)
+node <skill-path>/scripts/dopple/dist/cli.js deploy --no-smoke --token "$DOPPLE_TOKEN"
+
+# Deploy as variant
+node <skill-path>/scripts/dopple/dist/cli.js deploy --as "variant-name" --no-smoke --token "$DOPPLE_TOKEN"
+
+# Initialize a new project
+node <skill-path>/scripts/dopple/dist/cli.js init
+```
+
+The skill defaults to `--no-smoke` since Claude Code/Codex environments typically lack Playwright.
+
+## Parsing Deploy Results
+
+The CLI outputs a machine-readable line after human-readable output:
+
+```
+__DEPLOY_RESULT__{"id":"uuid","name":"my-game","version":3,"manifest_url":"https://...","qr_url":"https://..."}
+```
+
+Parse this line from the Bash output to extract deploy results for Slack posting.
+
+## Slack Notification Logic
+
+1. Check if `slack_send_message` tool is available (Slack MCP connected)
+2. If available:
+   - Read `dopple.toml` for `[slack] channel` (default: `#qr-f3st-26`)
+   - Post message with activity name, QR page URL, manifest URL, deployer, version
+3. If not available:
+   - Present the URLs to the user for manual sharing
