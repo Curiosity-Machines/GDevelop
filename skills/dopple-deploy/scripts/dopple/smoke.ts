@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { join, extname } from 'node:path';
+import { join, extname, resolve as resolvePath } from 'node:path';
 import type { DoppleConfig } from './config.js';
 
 const MIME_TYPES: Record<string, string> = {
@@ -18,7 +18,15 @@ const MIME_TYPES: Record<string, string> = {
 function startStaticServer(root: string): Promise<{ server: Server; port: number }> {
   return new Promise((resolve, reject) => {
     const server = createServer(async (req, res) => {
-      let filePath = join(root, req.url === '/' ? 'index.html' : req.url || 'index.html');
+      const resolvedRoot = resolvePath(root);
+      let filePath = resolvePath(root, (req.url === '/' ? 'index.html' : req.url || 'index.html').replace(/^\//, ''));
+
+      // Prevent path traversal outside the build directory
+      if (!filePath.startsWith(resolvedRoot)) {
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        res.end('Forbidden');
+        return;
+      }
 
       try {
         const fileStat = await stat(filePath);

@@ -12,7 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const BUCKET = 'activity-bundles';
 const MAX_BUNDLE_SIZE = 50 * 1024 * 1024; // 50 MB
 const VALID_ICON_EXTENSIONS = new Set([
-  'bmp', 'jpg', 'jpeg', 'png', 'psd', 'tga', 'tiff', 'tif',
+  'bmp', 'jpg', 'jpeg', 'png', 'psd', 'svg', 'tga', 'tiff', 'tif',
 ]);
 
 // CORS headers

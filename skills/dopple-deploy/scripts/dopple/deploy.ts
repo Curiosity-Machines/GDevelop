@@ -81,11 +81,16 @@ export async function deploy(
     // Phase 1: Request signed upload URLs
     console.log(`Deploying "${activityName}"...`);
 
+    const iconExtension = config.icon
+      ? config.icon.split('.').pop()?.toLowerCase()
+      : undefined;
+
     const initBody: Record<string, unknown> = {
       action: 'init',
       name: activityName,
       entry_point: config.entry_point,
       has_icon: !!iconData,
+      ...(iconData && iconExtension ? { icon_extension: iconExtension } : {}),
     };
 
     const initRes = await fetch(deployUrl, {
@@ -103,7 +108,7 @@ export async function deploy(
     }
 
     const initData = await initRes.json() as {
-      id: string;
+      activity_id: string;
       bundle_upload_url: string;
       icon_upload_url?: string;
     };
@@ -145,7 +150,9 @@ export async function deploy(
       },
       body: JSON.stringify({
         action: 'finalize',
-        id: initData.id,
+        activity_id: initData.activity_id,
+        entry_point: config.entry_point,
+        ...(iconExtension ? { icon_extension: iconExtension } : {}),
       }),
     });
 
