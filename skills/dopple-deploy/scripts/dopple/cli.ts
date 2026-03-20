@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     options: {
       as: { type: 'string' },
       token: { type: 'string' },
-      smoke: { type: 'boolean', default: true },
+      'no-smoke': { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
       await runBuild(config, projectRoot);
 
       // Smoke test (unless --no-smoke)
-      if (values.smoke) {
+      if (!values['no-smoke']) {
         try {
           await runSmokeTest(config, projectRoot);
         } catch (err) {
