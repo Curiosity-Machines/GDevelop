@@ -5,6 +5,10 @@
 [functions.get-manifest]
 verify_jwt = false
 
+# deploy-activity requires authentication (JWT verified by Supabase gateway)
+[functions.deploy-activity]
+verify_jwt = true
+
 
 
 
