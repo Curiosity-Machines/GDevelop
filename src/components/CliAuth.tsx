@@ -12,7 +12,11 @@ export function CliAuth() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    const hash = window.location.hash.substring(1)
+    // Hash is captured by inline script in index.html before Supabase
+    // client consumes it. Read from sessionStorage first, fall back to hash.
+    const hash = sessionStorage.getItem('cli-auth-hash') || window.location.hash.substring(1)
+    sessionStorage.removeItem('cli-auth-hash')
+
     if (!hash) {
       setError('No authentication tokens received.')
       return

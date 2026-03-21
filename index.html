@@ -11,6 +11,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Capture CLI auth hash before Supabase JS client consumes it
+      if (location.pathname === '/cli-auth' && location.hash) {
+        sessionStorage.setItem('cli-auth-hash', location.hash.substring(1));
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
