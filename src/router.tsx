@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import App from './App'
-import { Auth, ManifestPage, PublicQRPage, ProtectedRoute } from './components'
+import { Auth, ManifestPage, PublicQRPage, ProtectedRoute, CliAuth } from './components'
 
 export const router = createBrowserRouter([
   // Public routes (no auth required)
@@ -15,6 +15,10 @@ export const router = createBrowserRouter([
   {
     path: '/qr/:id',
     element: <PublicQRPage />,
+  },
+  {
+    path: '/cli-auth',
+    element: <CliAuth />,
   },
   // Protected routes (auth required)
   {
