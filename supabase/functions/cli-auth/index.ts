@@ -1,10 +1,38 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return base64UrlEncode(new Uint8Array(hash));
+}
+
+function base64UrlEncode(buffer: Uint8Array): string {
+  let binary = "";
+  for (const byte of buffer) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function codePage(code: string): Response {
+  return new Response(
+    `Dopple CLI Login\n\nPaste this code in your terminal:\n\n${code}\n\nYou can close this tab after pasting.\n`,
+    {
+      headers: { ...corsHeaders, "Content-Type": "text/plain; charset=utf-8" },
+    }
+  );
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,90 +42,79 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-  // Step 1: If we have a refresh_token param, show the code page
-  const refreshToken = url.searchParams.get("refresh_token");
-  if (refreshToken) {
-    const code = btoa(refreshToken);
-    return new Response(
-      `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dopple CLI Login</title></head>
-<body style="font-family:-apple-system,system-ui,sans-serif;max-width:480px;margin:80px auto;text-align:center;padding:0 20px">
-  <h2>Paste this code in your terminal</h2>
-  <div id="code" style="font-family:monospace;font-size:20px;background:#f0f0f0;padding:16px 24px;border-radius:8px;margin:20px 0;letter-spacing:1px;user-select:all;cursor:pointer;word-break:break-all">dopple:${code}</div>
-  <button onclick="navigator.clipboard.writeText(document.getElementById('code').textContent).then(()=>{this.textContent='Copied!';this.style.background='#22c55e';setTimeout(()=>{this.textContent='Copy to clipboard';this.style.background='#2563eb'},2000)})" style="padding:10px 24px;font-size:16px;cursor:pointer;border:none;background:#2563eb;color:white;border-radius:6px">Copy to clipboard</button>
-  <p style="margin-top:24px;color:#666">You can close this tab after pasting the code.</p>
-</body>
-</html>`,
-      {
-        headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
-      }
-    );
-  }
-
-  // Step 2: If we have an access_token in hash (via relay), extract refresh_token
-  // Supabase sends tokens as hash fragments, so we need a relay page to convert them
-  const accessToken = url.searchParams.get("access_token");
-  if (accessToken) {
-    // We got tokens as query params (from the relay page), redirect to show code
-    const rt = url.searchParams.get("refresh_token");
-    if (rt) {
-      const code = btoa(rt);
-      return new Response(
-        `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dopple CLI Login</title></head>
-<body style="font-family:-apple-system,system-ui,sans-serif;max-width:480px;margin:80px auto;text-align:center;padding:0 20px">
-  <h2>Paste this code in your terminal</h2>
-  <div id="code" style="font-family:monospace;font-size:20px;background:#f0f0f0;padding:16px 24px;border-radius:8px;margin:20px 0;letter-spacing:1px;user-select:all;cursor:pointer;word-break:break-all">dopple:${code}</div>
-  <button onclick="navigator.clipboard.writeText(document.getElementById('code').textContent).then(()=>{this.textContent='Copied!';this.style.background='#22c55e';setTimeout(()=>{this.textContent='Copy to clipboard';this.style.background='#2563eb'},2000)})" style="padding:10px 24px;font-size:16px;cursor:pointer;border:none;background:#2563eb;color:white;border-radius:6px">Copy to clipboard</button>
-  <p style="margin-top:24px;color:#666">You can close this tab after pasting the code.</p>
-</body>
-</html>`,
-        {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "text/html; charset=utf-8",
-          },
-        }
-      );
-    }
-  }
-
-  // Step 3: No tokens yet. Serve a page that either:
-  // a) Has hash fragments (from OAuth redirect) → relay them as query params
-  // b) No hash → show login button that starts OAuth
   const functionUrl = `${supabaseUrl}/functions/v1/cli-auth`;
 
-  return new Response(
-    `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dopple CLI Login</title></head>
-<body style="font-family:-apple-system,system-ui,sans-serif;max-width:480px;margin:80px auto;text-align:center;padding:0 20px">
-  <div id="loading" style="display:none"><h2>Completing login...</h2></div>
-  <div id="login">
-    <h2>Dopple CLI Login</h2>
-    <p style="color:#666;margin-bottom:24px">Sign in to connect your terminal to Dopple Studio.</p>
-    <a href="${supabaseUrl}/auth/v1/authorize?provider=github&redirect_to=${encodeURIComponent(functionUrl)}"
-       style="padding:12px 32px;font-size:16px;cursor:pointer;border:none;background:#24292f;color:white;border-radius:6px;display:inline-flex;align-items:center;gap:8px;text-decoration:none">
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      Sign in with GitHub
-    </a>
-  </div>
-  <script>
-    // If hash has tokens from OAuth redirect, relay them as query params to this same function
-    var hash = window.location.hash.substring(1);
-    if (hash && hash.indexOf('access_token') !== -1) {
-      document.getElementById('login').style.display = 'none';
-      document.getElementById('loading').style.display = 'block';
-      window.location.replace(window.location.pathname + '?' + hash);
+  // Step 2: After OAuth, Supabase redirects here with ?code=...
+  // Exchange the code for tokens using the PKCE verifier from the cookie
+  const code = url.searchParams.get("code");
+  if (code) {
+    // Read the PKCE verifier from cookie
+    const cookies = req.headers.get("cookie") || "";
+    const match = cookies.match(/pkce_verifier=([^;]+)/);
+    const verifier = match ? match[1] : null;
+
+    if (!verifier) {
+      return new Response("Missing PKCE verifier. Please try logging in again.", {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
-  </script>
-</body>
-</html>`,
-    {
-      headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+
+    // Exchange authorization code for tokens
+    const tokenRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=pkce`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseAnonKey,
+      },
+      body: JSON.stringify({
+        auth_code: code,
+        code_verifier: verifier,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const err = await tokenRes.text();
+      return new Response(`Token exchange failed: ${err}`, {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
-  );
+
+    const tokens = await tokenRes.json();
+    const refreshToken = tokens.refresh_token;
+
+    if (!refreshToken) {
+      return new Response("No refresh token received.", {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
+    const doppleCode = "dopple:" + btoa(refreshToken);
+
+    // Clear the cookie and show the code
+    return codePage(doppleCode);
+  }
+
+  // Step 1: No code yet — generate PKCE challenge and redirect to OAuth
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+
+  const authUrl = new URL(`${supabaseUrl}/auth/v1/authorize`);
+  authUrl.searchParams.set("provider", "github");
+  authUrl.searchParams.set("redirect_to", functionUrl);
+  authUrl.searchParams.set("code_challenge", challenge);
+  authUrl.searchParams.set("code_challenge_method", "S256");
+  authUrl.searchParams.set("flow_type", "pkce");
+
+  // Store verifier in a cookie, redirect to OAuth
+  return new Response(null, {
+    status: 302,
+    headers: {
+      ...corsHeaders,
+      "Location": authUrl.toString(),
+      "Set-Cookie": `pkce_verifier=${verifier}; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
+    },
+  });
 });
