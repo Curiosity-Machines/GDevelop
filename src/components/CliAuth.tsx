@@ -36,8 +36,22 @@ export function CliAuth() {
     setCode('dopple:' + btoa(refreshToken))
   }, [])
 
+  useEffect(() => {
+    // After OAuth redirect back, check if we have a session (flag was set before OAuth)
+    if (sessionStorage.getItem('dopple-cli-auth')) {
+      sessionStorage.removeItem('dopple-cli-auth')
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.refresh_token) {
+          setCode('dopple:' + btoa(session.refresh_token))
+        }
+      })
+    }
+  }, [])
+
   const handleLogin = async () => {
     setLoggingIn(true)
+    // Set flag so we know to show the code after OAuth redirect
+    sessionStorage.setItem('dopple-cli-auth', '1')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
@@ -47,6 +61,7 @@ export function CliAuth() {
     if (error) {
       setError(`Login failed: ${error.message}`)
       setLoggingIn(false)
+      sessionStorage.removeItem('dopple-cli-auth')
     }
   }
 

@@ -12,6 +12,10 @@
   <body>
     <div id="root"></div>
     <script>
+      // CLI auth: if we land on / after OAuth but the CLI flag is set, redirect to /cli-auth
+      if (sessionStorage.getItem('dopple-cli-auth') && location.pathname === '/' && location.hash) {
+        location.replace('/cli-auth');
+      }
       // Capture CLI auth hash before Supabase JS client consumes it
       if (location.pathname === '/cli-auth' && location.hash) {
         sessionStorage.setItem('cli-auth-hash', location.hash.substring(1));
