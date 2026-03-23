@@ -7,9 +7,12 @@
  * the generic "Dopple Studio" fallback.
  */
 
+// These are public values — same as baked into the CLI defaults.
+const SUPABASE_URL = 'https://onljswkegixyjjhpcldn.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ubGpzd2tlZ2l4eWpqaHBjbGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDY1MzEsImV4cCI6MjA4MTEyMjUzMX0.MtOk_dTmjvSduX2AW4YzmSwxaACua3B5z3O8gBRPG7k';
+
 interface Env {
-  VITE_SUPABASE_URL: string;
-  VITE_SUPABASE_ANON_KEY: string;
   ASSETS: { fetch: (req: Request) => Promise<Response> };
 }
 
@@ -40,11 +43,11 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   // Attempt to fetch activity metadata for OG injection
   try {
     const res = await fetch(
-      `${env.VITE_SUPABASE_URL}/rest/v1/activities?id=eq.${encodeURIComponent(id)}&select=name,description,icon_url,bundle_path&limit=1`,
+      `${SUPABASE_URL}/rest/v1/activities?id=eq.${encodeURIComponent(id)}&select=name,description,icon_url,bundle_path&limit=1`,
       {
         headers: {
-          apikey: env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${env.VITE_SUPABASE_ANON_KEY}`,
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         },
       }
     );
@@ -59,7 +62,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
           activity.description ?? 'Scan to load this activity on your Dopple device.';
         const pageUrl = request.url;
         const imageUrl = activity.bundle_path
-          ? `${env.VITE_SUPABASE_URL}/storage/v1/object/public/activity-bundles/${activity.bundle_path}/qr.png`
+          ? `${SUPABASE_URL}/storage/v1/object/public/activity-bundles/${activity.bundle_path}/qr.png`
           : null;
 
         const ogTags = [
