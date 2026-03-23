@@ -1,14 +1,23 @@
 {
-  "name": "@dopple/cli",
+  "name": "@curiosity-machines/dopple-cli",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
     "dopple": "./dist/cli.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Curiosity-Machines/claude-skills.git",
+    "directory": "dopple-deploy/scripts/dopple"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",
