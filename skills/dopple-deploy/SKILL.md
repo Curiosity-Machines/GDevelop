@@ -71,24 +71,22 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 
 ## Slack Message Format
 
-When posting to Slack, include:
+Compose the message as a single string with `\n` between lines. **Do not wrap URLs in `<>` angle brackets** — Slack auto-links bare URLs and angle brackets cause line-break parsing bugs. Use plain text for the email/name to avoid `mailto:` auto-linking.
 
-- Activity name (and variant name if `--as` was used)
-- Version number and a one-line description of what changed
-- QR code page URL (the `/qr/:id` public page — scannable directly from Slack on mobile)
-- Manifest API URL (for programmatic access)
-- Who deployed (from `dopple whoami`)
-
-Example message:
 ```
 🎮 Activity Deployed: orbital-clock v4
 What's new: fixed collision detection, added countdown sfx
-QR: https://studio.dopple.dev/qr/abc-123
-API: https://xxx.supabase.co/functions/v1/get-manifest?id=abc-123
-By: mike@team.com
+QR: https://dopple-studio.pages.dev/qr/abc-123
+API: https://onljswkegixyjjhpcldn.supabase.co/functions/v1/get-manifest?id=abc-123
+By: mike (michael@dopple.com)
 ```
 
-Always show this draft to the user before posting — they may want to edit the "What's new" line.
+If `qr_image_url` is present in the deploy result, post it as a second message immediately after — Slack renders `.png` URLs inline:
+```
+https://...supabase.co/storage/v1/object/public/activity-bundles/.../qr.png
+```
+
+Always show both the message draft and the image URL to the user for approval before posting.
 
 ## The `--as` Flag
 
