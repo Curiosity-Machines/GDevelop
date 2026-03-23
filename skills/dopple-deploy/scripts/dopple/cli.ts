@@ -9,6 +9,17 @@ import { runBuild } from './build.js';
 import { runSmokeTest } from './smoke.js';
 import { deploy, type DeployResult } from './deploy.js';
 
+// Configure global fetch proxy if HTTPS_PROXY is set (e.g. in containers).
+// Must run before any Supabase client calls.
+async function setupProxy(): Promise<void> {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy ||
+                   process.env.HTTP_PROXY || process.env.http_proxy;
+  if (proxyUrl) {
+    const { ProxyAgent, setGlobalDispatcher } = await import('undici');
+    setGlobalDispatcher(new ProxyAgent(proxyUrl));
+  }
+}
+
 const HELP = `
 dopple - Deploy activities to Dopple Studio
 
@@ -29,6 +40,8 @@ Options:
 `.trim();
 
 async function main(): Promise<void> {
+  await setupProxy();
+
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
