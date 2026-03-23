@@ -35,9 +35,21 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 
 1. **Check for `dopple.toml`** in the project root. If missing, tell the user and offer to run `dopple init` to create one.
 
-2. **Check auth** — run `dopple whoami`. If not authenticated, run `dopple login`. It prints a URL — open it in any browser, sign in, then paste the code it shows back into the terminal. Credentials are cached at `~/.dopple/auth.json`.
+2. **Verify the activity name** — read the `name` from `dopple.toml` and sanity-check it:
+   - Compare against the git branch name (`git branch --show-current`) and the directory name
+   - If the name looks auto-generated, branch-derived (e.g. `feature-xyz`, `main`, `dev`), or clearly wrong, flag it and ask the user to confirm or correct it before continuing
+   - If the user specified `--as`, use that instead and skip this check
+   - A good name is short, descriptive, and stable across deploys (e.g. `orbital-clock`, `physics-demo`)
 
-3. **Run the deploy**:
+3. **Gather version context** — collect recent commits to describe what's in this deploy:
+   ```bash
+   git log --oneline -5
+   ```
+   Summarize in one line what changed (e.g. "fixed collision, added sfx"). This becomes the version description in the Slack message.
+
+4. **Check auth** — run `dopple whoami`. If not authenticated, run `dopple login`. It prints a URL — open it in any browser, sign in, then paste the code it shows back into the terminal. Credentials are cached at `~/.dopple/auth.json`.
+
+5. **Run the deploy**:
    ```bash
    dopple deploy --no-smoke                        # Deploy as configured name
    dopple deploy --as "variant-name" --no-smoke    # Deploy under a different activity name
@@ -45,15 +57,16 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
    Always use `--no-smoke` — Claude Code environments don't have Playwright.
    The CLI will:
    - Run the build command from `dopple.toml`
-   - Serve the build output locally and smoke-test with headless Chromium
    - ZIP the output directory
    - POST to the deploy edge function (auth + bundle + metadata)
-   - Return the manifest URL and QR code URL
+   - Return the manifest URL, QR code URL, and version number
 
-4. **Report results** to the user: activity name, manifest URL, QR page URL, version number.
+6. **Report results** to the user: activity name, manifest URL, QR page URL, version number.
 
-5. **Post to Slack** (if available):
-   - If Slack MCP is connected in the session, post a message with the QR page URL and manifest link to the configured channel
+7. **Review and post to Slack** (if Slack MCP is available):
+   - Compose the Slack message (see format below) including the version description from step 3
+   - **Show the draft message to the user and ask for confirmation before posting**
+   - Post only after the user approves — they may want to tweak the description
    - If Slack MCP is not available, give the user the URLs to paste wherever they want
 
 ## Slack Message Format
@@ -61,18 +74,21 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 When posting to Slack, include:
 
 - Activity name (and variant name if `--as` was used)
+- Version number and a one-line description of what changed
 - QR code page URL (the `/qr/:id` public page — scannable directly from Slack on mobile)
 - Manifest API URL (for programmatic access)
-- Who deployed (from auth)
-- Version number
+- Who deployed (from `dopple whoami`)
 
 Example message:
 ```
-🎮 Activity Deployed: my-game
+🎮 Activity Deployed: orbital-clock v4
+What's new: fixed collision detection, added countdown sfx
 QR: https://studio.dopple.dev/qr/abc-123
 API: https://xxx.supabase.co/functions/v1/get-manifest?id=abc-123
-By: mike@team.com | v3
+By: mike@team.com
 ```
+
+Always show this draft to the user before posting — they may want to edit the "What's new" line.
 
 ## The `--as` Flag
 
@@ -156,7 +172,8 @@ The `qr_image_path` is a local 512px PNG QR code encoding the QR page URL. Use t
 1. Check if `slack_send_message` tool is available (Slack MCP connected)
 2. If available:
    - Read `dopple.toml` for `[slack] channel` (default: `#qr-f3st-26`)
-   - Post message with activity name, QR page URL, manifest URL, deployer, version
-   - Include the QR page URL directly — it's publicly accessible and scannable from Slack on mobile
+   - Compose the message using the format above
+   - **Show the draft to the user and wait for approval**
+   - Post once approved
 3. If not available:
    - Present the URLs to the user for manual sharing
