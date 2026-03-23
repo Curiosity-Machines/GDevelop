@@ -12,7 +12,7 @@ export interface DeployResult {
   version: number;
   manifest_url: string;
   qr_url: string;
-  qr_image_path?: string;
+  qr_image_url?: string;
 }
 
 const DEFAULT_SUPABASE_URL = 'https://onljswkegixyjjhpcldn.supabase.co';
@@ -109,6 +109,7 @@ export async function deploy(
     const initData = await initRes.json() as {
       activity_id: string;
       bundle_upload_url: string;
+      qr_upload_url?: string;
       icon_upload_url?: string;
     };
 
@@ -136,6 +137,25 @@ export async function deploy(
 
       if (!iconRes.ok) {
         throw new Error(`Icon upload failed (${iconRes.status})`);
+      }
+    }
+
+    // Generate and upload QR PNG (encodes the manifest URL so devices can scan directly)
+    if (initData.qr_upload_url) {
+      try {
+        const QRCode = await import('qrcode');
+        const manifestUrl = `${supabaseUrl}/functions/v1/get-manifest?id=${initData.activity_id}`;
+        const qrPath = join(tmpdir(), `dopple-qr-${randomUUID()}.png`);
+        await QRCode.toFile(qrPath, manifestUrl, { width: 512, margin: 2 });
+        const qrData = new Uint8Array(await readFile(qrPath));
+        await fetch(initData.qr_upload_url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'image/png' },
+          body: qrData,
+        });
+        await unlink(qrPath).catch(() => {});
+      } catch {
+        // Non-fatal — deploy continues without the QR image
       }
     }
 

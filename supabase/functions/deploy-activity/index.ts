@@ -137,11 +137,18 @@ async function handleInitiate(req: Request, body: InitiateRequest): Promise<Resp
     return errorResponse('Server error', 500);
   }
 
+  // QR PNG upload URL (always requested — CLI uploads after generating locally)
+  const qrStoragePath = `${bundlePath}/qr.png`;
+  const { data: qrUpload } = await serviceClient.storage
+    .from(BUCKET)
+    .createSignedUploadUrl(qrStoragePath, { upsert: true });
+
   const result: Record<string, unknown> = {
     activity_id: activityId,
     bundle_upload_url: bundleUpload.signedUrl,
     bundle_upload_token: bundleUpload.token,
     bundle_path: bundlePath,
+    ...(qrUpload ? { qr_upload_url: qrUpload.signedUrl } : {}),
   };
 
   // Icon upload URL (if requested)
@@ -268,6 +275,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const siteUrl = Deno.env.get('SITE_URL') || 'https://dopple-studio.pages.dev';
+  const qrImageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${userId}/${activity.id}/qr.png`;
 
   return jsonResponse({
     id: updated.id,
@@ -275,6 +283,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
     version: updated.version,
     manifest_url: `${supabaseUrl}/functions/v1/get-manifest?id=${updated.id}`,
     qr_url: `${siteUrl}/qr/${updated.id}`,
+    qr_image_url: qrImageUrl,
   });
 }
 

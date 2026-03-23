@@ -106,15 +106,6 @@ async function main(): Promise<void> {
       // Deploy
       const result: DeployResult = await deploy(config, projectRoot, accessToken, values.as);
 
-      // Generate local QR code image
-      const qrTarget = result.qr_url || result.manifest_url;
-      if (qrTarget) {
-        const QRCode = await import('qrcode');
-        const qrPath = join(projectRoot, '.dopple-qr.png');
-        await QRCode.toFile(qrPath, qrTarget, { width: 512, margin: 2 });
-        result.qr_image_path = qrPath;
-      }
-
       // Human-readable output
       console.log('');
       console.log('Deploy successful!');
@@ -122,10 +113,10 @@ async function main(): Promise<void> {
       console.log(`  Version:  ${result.version}`);
       console.log(`  Manifest: ${result.manifest_url}`);
       if (result.qr_url) {
-        console.log(`  QR Code:  ${result.qr_url}`);
+        console.log(`  QR Page:  ${result.qr_url}`);
       }
-      if (result.qr_image_path) {
-        console.log(`  QR Image: ${result.qr_image_path}`);
+      if (result.qr_image_url) {
+        console.log(`  QR Image: ${result.qr_image_url}`);
       }
       console.log('');
 

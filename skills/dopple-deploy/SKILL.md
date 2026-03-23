@@ -160,12 +160,12 @@ Auth is resolved automatically from `~/.dopple/auth.json` (written by `dopple lo
 The CLI outputs a machine-readable line after human-readable output:
 
 ```
-__DEPLOY_RESULT__{"id":"uuid","name":"my-game","version":3,"manifest_url":"https://...","qr_url":"https://...","qr_image_path":"/path/to/.dopple-qr.png"}
+__DEPLOY_RESULT__{"id":"uuid","name":"my-game","version":3,"manifest_url":"https://...","qr_url":"https://...","qr_image_url":"https://...supabase.co/storage/v1/object/public/activity-bundles/.../qr.png"}
 ```
 
 Parse this line from the Bash output to extract deploy results for Slack posting.
 
-The `qr_image_path` is a local 512px PNG QR code encoding the QR page URL. Use this file when uploading to Slack so the QR code is visible inline without clicking a link.
+`qr_image_url` is a public 512px PNG hosted in Supabase storage, encoding the manifest URL. Post this URL directly in Slack — Slack renders `.png` URLs inline so the QR is visible without clicking.
 
 ## Slack Notification Logic
 
