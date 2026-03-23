@@ -31,6 +31,7 @@ Commands:
   login       Authenticate via browser OAuth
   whoami      Show the currently authenticated user
   deploy      Build, test, and deploy the activity
+  update      Update the CLI and Claude Code skill
 
 Options:
   --as <name>      Override the activity name for this deploy
@@ -130,6 +131,30 @@ async function main(): Promise<void> {
 
       // Machine-readable output
       console.log(`__DEPLOY_RESULT__${JSON.stringify(result)}`);
+      break;
+    }
+
+    case 'update': {
+      const { execFileSync } = await import('node:child_process');
+      const { homedir } = await import('node:os');
+      const { mkdirSync, writeFileSync } = await import('node:fs');
+
+      // Update CLI via npm
+      console.log('Updating CLI...');
+      execFileSync('npm', ['update', '-g', '@curiosity-machines/dopple-cli'], { stdio: 'inherit' });
+
+      // Update skill
+      console.log('Updating skill...');
+      const skillDir = join(homedir(), '.claude', 'commands');
+      mkdirSync(skillDir, { recursive: true });
+      const skillContent = execFileSync('gh', [
+        'api', 'repos/Curiosity-Machines/claude-skills/contents/dopple-deploy/SKILL.md',
+        '--jq', '.content',
+      ], { encoding: 'utf-8' });
+      const decoded = Buffer.from(skillContent.trim(), 'base64').toString();
+      writeFileSync(join(skillDir, 'dopple-deploy.md'), decoded);
+
+      console.log('Done!');
       break;
     }
 
