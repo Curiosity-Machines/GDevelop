@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const doppleCode = "dopple:" + btoa(refreshToken);
+    const doppleCode = btoa(refreshToken);
 
     // Clear the cookie and show the code
     return codePage(doppleCode);

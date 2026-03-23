@@ -182,11 +182,14 @@ async function loginHeadless(supabase: SupabaseClient, authUrl: string): Promise
 
   let refreshToken: string;
 
-  if (input.startsWith('dopple:')) {
-    // Code format: dopple:<base64-encoded-refresh-token>
-    refreshToken = Buffer.from(input.slice(7), 'base64').toString();
+  // Strip legacy "dopple:" prefix if present
+  const code = input.startsWith('dopple:') ? input.slice(7) : input;
+
+  // Try as base64-encoded refresh token first, fall back to URL
+  const decoded = Buffer.from(code, 'base64').toString();
+  if (decoded.length > 0 && !code.startsWith('http')) {
+    refreshToken = decoded;
   } else {
-    // Full URL fallback
     try {
       const parsed = new URL(input);
       let rt = parsed.searchParams.get('refresh_token');
