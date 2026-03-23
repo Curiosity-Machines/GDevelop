@@ -10,6 +10,7 @@ export interface DeployResult {
   id: string;
   name: string;
   version: number;
+  description?: string;
   manifest_url: string;
   qr_url: string;
   qr_image_url?: string;
@@ -90,6 +91,7 @@ export async function deploy(
       entry_point: config.entry_point,
       has_icon: !!iconData,
       ...(iconData && iconExtension ? { icon_extension: iconExtension } : {}),
+      ...(config.description ? { description: config.description } : {}),
     };
 
     const initRes = await fetch(deployUrl, {

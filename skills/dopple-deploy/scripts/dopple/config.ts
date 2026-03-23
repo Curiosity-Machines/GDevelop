@@ -6,6 +6,7 @@ export interface DoppleConfig {
   name: string;
   build_output: string;
   entry_point: string;
+  description?: string;
   build_command?: string;
   icon?: string;
   slack?: {
@@ -50,6 +51,10 @@ export async function loadConfig(projectRoot: string): Promise<DoppleConfig> {
 
   if (typeof parsed.build_command === 'string') {
     config.build_command = parsed.build_command;
+  }
+
+  if (typeof parsed.description === 'string') {
+    config.description = parsed.description;
   }
 
   if (typeof parsed.icon === 'string') {

@@ -68,6 +68,7 @@ async function getUserId(userClient: ReturnType<typeof createClient>): Promise<s
 interface InitiateRequest {
   name: string;
   entry_point: string;
+  description?: string;
   has_icon?: boolean;
   icon_extension?: string;
 }
@@ -109,10 +110,14 @@ async function handleInitiate(req: Request, body: InitiateRequest): Promise<Resp
 
   if (existing) {
     activityId = existing.id;
+    // Update description if provided
+    if (body.description) {
+      await userClient.from('activities').update({ description: body.description }).eq('id', activityId);
+    }
   } else {
     const { data: inserted, error: insertError } = await userClient
       .from('activities')
-      .insert({ name: body.name, user_id: userId })
+      .insert({ name: body.name, user_id: userId, ...(body.description ? { description: body.description } : {}) })
       .select('id')
       .single();
 
@@ -204,7 +209,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
   // Verify activity exists and belongs to user (RLS enforces ownership)
   const { data: activity, error: activityError } = await userClient
     .from('activities')
-    .select('id, name, version')
+    .select('id, name, version, description')
     .eq('id', body.activity_id)
     .single();
 
@@ -265,7 +270,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
       icon_url: iconUrl,
     })
     .eq('id', activity.id)
-    .select('id, name, version')
+    .select('id, name, version, description')
     .single();
 
   if (updateError || !updated) {
@@ -281,6 +286,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
     id: updated.id,
     name: updated.name,
     version: updated.version,
+    description: (updated as Record<string, unknown>).description ?? null,
     manifest_url: `${supabaseUrl}/functions/v1/get-manifest?id=${updated.id}`,
     qr_url: `${siteUrl}/qr/${updated.id}`,
     qr_image_url: qrImageUrl,

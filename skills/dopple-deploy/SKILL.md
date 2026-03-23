@@ -62,11 +62,31 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 
 6. **Report results** to the user: activity name, manifest URL, QR page URL, version number.
 
-7. **Review and post to Slack** (if Slack MCP is available):
-   - Compose the Slack message (see format below) including the version description from step 3
-   - **Show the draft message to the user and ask for confirmation before posting**
-   - Post only after the user approves — they may want to tweak the description
-   - If Slack MCP is not available, give the user the URLs to paste wherever they want
+7. **Draft Slack announcement and get confirmation before posting**:
+
+   Compose the draft using the format below, then present it to the user like this:
+
+   > Here's the draft announcement for **#channel-name**. Review before I post:
+   >
+   > ```
+   > 🎮 Activity Name vN
+   > One-line description of what this activity does.
+   > What's new: summarized from git log
+   > QR: https://...
+   > API: https://...
+   > By: name (email)
+   > ```
+   > *(QR image will follow as a second message for inline display)*
+   >
+   > Does this look right? Specifically:
+   > - **Name** correct? (`Activity Name`)
+   > - **Description** clear to someone who hasn't seen this before?
+   > - **What's new** accurate?
+   > - **Channel** right? (currently `#channel-name`)
+   >
+   > Reply "post it" or tell me what to change.
+
+   Wait for explicit approval. Only send after the user confirms. If Slack MCP is not available, present the URLs for manual sharing instead.
 
 ## Slack Message Format
 
@@ -83,12 +103,12 @@ By: mike (michael@dopple.com)
 
 Use the URLs verbatim from the `__DEPLOY_RESULT__` JSON — never construct them manually. The backend returns the correct studio domain.
 
+The description line is the most important part — it tells teammates who haven't seen this activity what it actually does. If the description in `dopple.toml` is thin or missing, suggest a better one before posting (you can see the code and README to inform this).
+
 If `qr_image_url` is present in the deploy result, post it as a second message immediately after — Slack renders `.png` URLs inline:
 ```
 {qr_image_url from __DEPLOY_RESULT__}
 ```
-
-Always show both the message draft and the image URL to the user for approval before posting.
 
 ## The `--as` Flag
 
