@@ -12,7 +12,8 @@ Deploy activities to Dopple Studio from the command line and optionally notify t
 The developer's project has a `dopple.toml` at the root that defines the activity:
 
 ```toml
-name = "my-game"
+name = "Orbital Clock"
+description = "A real-time clock with orbital planet rings and a countdown timer."
 build_command = "npm run build"
 build_output = "dist"
 entry_point = "index.html"
@@ -35,11 +36,9 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 
 1. **Check for `dopple.toml`** in the project root. If missing, tell the user and offer to run `dopple init` to create one.
 
-2. **Verify the activity name** — read the `name` from `dopple.toml` and sanity-check it:
-   - Compare against the git branch name (`git branch --show-current`) and the directory name
-   - If the name looks auto-generated, branch-derived (e.g. `feature-xyz`, `main`, `dev`), or clearly wrong, flag it and ask the user to confirm or correct it before continuing
-   - If the user specified `--as`, use that instead and skip this check
-   - A good name is short, descriptive, and stable across deploys (e.g. `orbital-clock`, `physics-demo`)
+2. **Verify the activity name and description** — read `dopple.toml` and check both fields:
+   - **Name**: compare against git branch and directory name. If it looks auto-generated, branch-derived (`feature-xyz`, `main`, `dev`), or like a slug, flag it. A good name is human-readable and title-cased: `Orbital Clock`, `Physics Demo`. If `--as` was specified, use that instead.
+   - **Description**: if missing from `dopple.toml`, suggest one based on the README first line, `package.json` description field, or recent git history — and ask the user to confirm or edit it. Keep it to 1–2 sentences. This gets stored in Studio and shown in Slack.
 
 3. **Gather version context** — collect recent commits to describe what's in this deploy:
    ```bash
@@ -54,7 +53,7 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
    dopple deploy --no-smoke                        # Deploy as configured name
    dopple deploy --as "variant-name" --no-smoke    # Deploy under a different activity name
    ```
-   Always use `--no-smoke` — Claude Code environments don't have Playwright.
+   **Always pass `--no-smoke`** — Claude Code environments don't have Playwright installed. Omitting it will hang waiting for a headless browser that isn't there.
    The CLI will:
    - Run the build command from `dopple.toml`
    - ZIP the output directory
@@ -74,9 +73,10 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 Compose the message as a single string with `\n` between lines. **Do not wrap URLs in `<>` angle brackets** — Slack auto-links bare URLs and angle brackets cause line-break parsing bugs. Use plain text for the email/name to avoid `mailto:` auto-linking.
 
 ```
-🎮 Activity Deployed: orbital-clock v4
+🎮 Orbital Clock v4
+A real-time clock with orbital planet rings and a countdown timer.
 What's new: fixed collision detection, added countdown sfx
-QR: https://dopple-studio.pages.dev/qr/abc-123
+QR: https://studio.dopple.com/qr/abc-123
 API: https://onljswkegixyjjhpcldn.supabase.co/functions/v1/get-manifest?id=abc-123
 By: mike (michael@dopple.com)
 ```
@@ -93,8 +93,10 @@ Always show both the message draft and the image URL to the user for approval be
 When the user wants to publish the same build under a different name (for side-by-side comparison of branches, experiments, etc.), use `--as`:
 
 ```bash
-dopple deploy --as "my-game-experimental"
+dopple deploy --as "my-game-experimental" --no-smoke
 ```
+
+> The flag is `--as`, not `--name`. Using `--name` will error.
 
 This creates a separate activity in Studio with its own QR code. The original activity is untouched. Useful for:
 - Testing a feature branch alongside production
@@ -113,7 +115,8 @@ This creates a separate activity in Studio with its own QR code. The original ac
 
 ### dopple.toml (per-project)
 ```toml
-name = "my-game"              # Activity name (required)
+name = "Orbital Clock"        # Human-readable display name (required)
+description = "A real-time clock with orbital rings."  # Shown in Studio + Slack (optional but encouraged)
 build_command = "npm run build" # Build command (optional — skip if pre-built)
 build_output = "dist"          # Output directory (required)
 entry_point = "index.html"     # Entry point in output (required)
