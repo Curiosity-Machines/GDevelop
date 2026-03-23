@@ -141,12 +141,10 @@ A command-line tool for deploying activities to Dopple Studio. Handles build, sm
 
 ### Install
 
-Requires Node.js 18+ and [GitHub CLI](https://cli.github.com) (`gh`) with Curiosity-Machines org access.
+Requires Node.js 18+ and [GitHub CLI](https://cli.github.com) (`gh`).
 
 ```bash
-npm config set @curiosity-machines:registry https://npm.pkg.github.com
-npm config set //npm.pkg.github.com/:_authToken $(gh auth token)
-npm install -g @curiosity-machines/dopple-cli
+eval "$(gh api repos/Curiosity-Machines/claude-skills/contents/dopple-deploy/install.sh --jq .content | base64 -d)"
 ```
 
 ### Usage

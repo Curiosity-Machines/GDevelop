@@ -20,7 +20,7 @@ if [ "$NODE_VERSION" -lt 18 ]; then
 fi
 echo "  Node.js $(node -v) ✓"
 
-# Configure GitHub Packages auth
+# Check GitHub CLI
 if ! command -v gh &>/dev/null; then
   echo "Error: GitHub CLI (gh) is required. Install it from https://cli.github.com" >&2
   exit 1
@@ -31,10 +31,21 @@ if ! gh auth status &>/dev/null; then
 fi
 echo "  GitHub CLI ✓"
 
-echo "  Configuring npm for GitHub Packages..."
+# Check token has read:packages scope
+echo "  Checking GitHub token scopes..."
+TOKEN_SCOPES=$(gh auth status 2>&1 | grep "Token scopes" || true)
+if ! echo "$TOKEN_SCOPES" | grep -q "read:packages"; then
+  echo "  Token missing read:packages scope. Requesting..."
+  gh auth refresh -s read:packages
+  echo "  Scope added ✓"
+fi
+echo "  Token scopes ✓"
+
+# Configure npm for GitHub Packages
+echo "  Configuring npm registry..."
 GH_TOKEN=$(gh auth token)
 npm config set "$SCOPE:registry" "$REGISTRY"
-npm config set "$REGISTRY/:_authToken" "$GH_TOKEN"
+npm config set "${REGISTRY#https:}/:_authToken" "$GH_TOKEN"
 echo "  Registry configured ✓"
 
 # Install
@@ -43,5 +54,5 @@ npm install -g "$PACKAGE"
 echo "  Installed ✓"
 
 echo ""
-echo "Done! Run 'dopple login' to authenticate."
+echo "Done! Run 'dopple login' to authenticate with Dopple Studio."
 )
