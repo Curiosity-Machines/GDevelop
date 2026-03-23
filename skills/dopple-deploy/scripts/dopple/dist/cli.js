@@ -124,7 +124,7 @@ async function main() {
             const { mkdirSync, writeFileSync } = await import('node:fs');
             // Update CLI via npm
             console.log('Updating CLI...');
-            execFileSync('npm', ['update', '-g', '@curiosity-machines/dopple-cli'], { stdio: 'inherit' });
+            execFileSync('npm', ['install', '-g', '@curiosity-machines/dopple-cli@latest'], { stdio: 'inherit' });
             // Update skill
             console.log('Updating skill...');
             const skillDir = join(homedir(), '.claude', 'commands');

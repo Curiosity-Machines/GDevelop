@@ -23,10 +23,10 @@ The `dopple` CLI handles the full deploy pipeline: build, smoke-test (headless C
 
 ## Setup
 
-The CLI is bundled with this skill at `scripts/dopple`. No separate installation needed — the skill invokes it directly:
+The `dopple` CLI is installed globally via `install.sh`. If `dopple` is not found, tell the user to install it:
 
 ```bash
-node <skill-path>/scripts/dopple <command>
+curl -fsSL https://raw.githubusercontent.com/Curiosity-Machines/claude-skills/main/dopple-deploy/install.sh | bash
 ```
 
 On first use in a project, run `dopple init` to create `dopple.toml`.
@@ -122,26 +122,23 @@ No configuration needed. The skill detects Slack MCP in the Claude Code/Codex se
 
 ## Skill Invocation
 
-The CLI is compiled at `scripts/dopple/dist/cli.js` relative to this skill's directory.
+Use the globally installed `dopple` command:
 
 ```bash
-# Set required env var (the Supabase project URL)
-export SUPABASE_URL="https://onljswkegixyjjhpcldn.supabase.co"
-
 # Check auth
-node <skill-path>/scripts/dopple/dist/cli.js whoami --token "$DOPPLE_TOKEN"
+dopple whoami
 
-# Deploy (default: skip smoke test in agent environments)
-node <skill-path>/scripts/dopple/dist/cli.js deploy --no-smoke --token "$DOPPLE_TOKEN"
+# Deploy (skip smoke test — Claude Code environments lack Playwright)
+dopple deploy --no-smoke
 
 # Deploy as variant
-node <skill-path>/scripts/dopple/dist/cli.js deploy --as "variant-name" --no-smoke --token "$DOPPLE_TOKEN"
+dopple deploy --as "variant-name" --no-smoke
 
 # Initialize a new project
-node <skill-path>/scripts/dopple/dist/cli.js init
+dopple init
 ```
 
-The skill defaults to `--no-smoke` since Claude Code/Codex environments typically lack Playwright.
+Auth is resolved automatically from `~/.dopple/auth.json` (written by `dopple login`). No env vars needed.
 
 ## Parsing Deploy Results
 
