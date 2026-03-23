@@ -35,13 +35,14 @@ On first use in a project, run `dopple init` to create `dopple.toml`.
 
 1. **Check for `dopple.toml`** in the project root. If missing, tell the user and offer to run `dopple init` to create one.
 
-2. **Check auth** — run `dopple whoami`. If not authenticated, run `dopple login` which opens a browser for Supabase OAuth. Credentials are cached at `~/.dopple/auth.json`.
+2. **Check auth** — run `dopple whoami`. If not authenticated, run `dopple login`. It prints a URL — open it in any browser, sign in, then paste the code it shows back into the terminal. Credentials are cached at `~/.dopple/auth.json`.
 
 3. **Run the deploy**:
    ```bash
-   dopple deploy                        # Deploy as configured name
-   dopple deploy --as "variant-name"    # Deploy under a different activity name
+   dopple deploy --no-smoke                        # Deploy as configured name
+   dopple deploy --as "variant-name" --no-smoke    # Deploy under a different activity name
    ```
+   Always use `--no-smoke` — Claude Code environments don't have Playwright.
    The CLI will:
    - Run the build command from `dopple.toml`
    - Serve the build output locally and smoke-test with headless Chromium
@@ -110,9 +111,7 @@ channel = "#qr-f3st-26"    # Slack channel for deploy notifications (optional)
 ### ~/.dopple/auth.json (global, managed by `dopple login`)
 ```json
 {
-  "supabase_url": "https://xxx.supabase.co",
-  "refresh_token": "...",
-  "user_email": "mike@team.com"
+  "refresh_token": "..."
 }
 ```
 
@@ -157,7 +156,7 @@ The `qr_image_path` is a local 512px PNG QR code encoding the QR page URL. Use t
 1. Check if `slack_send_message` tool is available (Slack MCP connected)
 2. If available:
    - Read `dopple.toml` for `[slack] channel` (default: `#qr-f3st-26`)
-   - Upload `qr_image_path` to the channel as a canvas/image attachment
    - Post message with activity name, QR page URL, manifest URL, deployer, version
+   - Include the QR page URL directly — it's publicly accessible and scannable from Slack on mobile
 3. If not available:
    - Present the URLs to the user for manual sharing

@@ -22,7 +22,7 @@
       "expectations": [
         "Uses --as flag with the variant name physics-test",
         "Attempts to post to #builds Slack channel",
-        "Tries Slack MCP first, falls back to webhook if unavailable",
+        "Uses Slack MCP if available, otherwise presents URLs to user for manual sharing",
         "Includes QR page URL in Slack message",
         "Includes activity name and variant in Slack message"
       ]
