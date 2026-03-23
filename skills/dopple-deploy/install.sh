@@ -48,11 +48,19 @@ npm config set "$SCOPE:registry" "$REGISTRY"
 npm config set "${REGISTRY#https:}/:_authToken" "$GH_TOKEN"
 echo "  Registry configured ✓"
 
-# Install
+# Install CLI
 echo "  Installing $PACKAGE..."
 npm install -g "$PACKAGE"
-echo "  Installed ✓"
+echo "  CLI installed ✓"
+
+# Install skill for Claude Code
+REPO="Curiosity-Machines/claude-skills"
+SKILL_DIR="$HOME/.claude/commands"
+mkdir -p "$SKILL_DIR"
+gh api "repos/$REPO/contents/dopple-deploy/SKILL.md" --jq .content | base64 -d > "$SKILL_DIR/dopple-deploy.md"
+echo "  Skill installed to ~/.claude/commands/dopple-deploy.md ✓"
 
 echo ""
 echo "Done! Run 'dopple login' to authenticate with Dopple Studio."
+echo "In Claude Code, type /dopple-deploy to use the skill."
 )
