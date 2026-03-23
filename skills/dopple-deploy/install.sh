@@ -31,9 +31,14 @@ npm run build --silent
 mkdir -p "$HOME/.local/bin"
 ln -sf "$INSTALL_DIR/dist/cli.js" "$HOME/.local/bin/dopple"
 
-if echo "$PATH" | tr ':' '\n' | grep -qE "(\.local/bin|\.dopple)"; then
-  echo "Done! Run 'dopple login' to authenticate."
-else
-  echo "Done! Add ~/.local/bin to your PATH:"
-  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+if ! echo "$PATH" | tr ':' '\n' | grep -qE "\.local/bin"; then
+  LINE='export PATH="$HOME/.local/bin:$PATH"'
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    if [ -f "$rc" ] && ! grep -qF '.local/bin' "$rc"; then
+      echo "$LINE" >> "$rc"
+    fi
+  done
+  export PATH="$HOME/.local/bin:$PATH"
 fi
+
+echo "Done! Run 'dopple login' to authenticate."
