@@ -1,3 +1,0 @@
-# Include compiled output (needed for skill to work without a build step)
-!dist/
-node_modules/
