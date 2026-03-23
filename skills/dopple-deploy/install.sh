@@ -44,8 +44,8 @@ echo "  Token scopes ✓"
 # Configure npm for GitHub Packages
 echo "  Configuring npm registry..."
 GH_TOKEN=$(gh auth token)
-npm config set "$SCOPE:registry" "$REGISTRY"
-npm config set "${REGISTRY#https:}/:_authToken" "$GH_TOKEN"
+npm config set '@curiosity-machines:registry' 'https://npm.pkg.github.com'
+npm config set '//npm.pkg.github.com/:_authToken' "$GH_TOKEN"
 echo "  Registry configured ✓"
 
 # Install CLI
