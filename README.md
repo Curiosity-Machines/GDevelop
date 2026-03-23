@@ -135,6 +135,40 @@ Dopple Studio is a Progressive Web App with:
 3. Open Chrome DevTools > Application > Service Workers
 4. Test offline by toggling "Offline" in Network tab
 
+## Dopple CLI
+
+A command-line tool for deploying activities to Dopple Studio. Handles build, smoke-test, ZIP, and upload.
+
+### Install
+
+```bash
+eval "$(gh api repos/Curiosity-Machines/claude-skills/contents/dopple-deploy/install.sh --jq .content | base64 -d)"
+```
+
+Requires Node.js 18+ and [GitHub CLI](https://cli.github.com) (`gh`) with org access.
+
+### Usage
+
+```bash
+dopple login                    # Authenticate via GitHub OAuth
+dopple init                     # Create dopple.toml in current project
+dopple deploy                   # Build, test, and deploy
+dopple deploy --as "variant"    # Deploy under a different name
+dopple whoami                   # Show authenticated user
+```
+
+### Configuration
+
+Create a `dopple.toml` at your project root (or run `dopple init`):
+
+```toml
+name = "my-game"
+build_command = "npm run build"
+build_output = "dist"
+entry_point = "index.html"
+icon = "./icon.png"
+```
+
 ## Deployment
 
 The project is configured for Cloudflare Pages deployment.
