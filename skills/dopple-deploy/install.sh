@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+(
 set -euo pipefail
 
 INSTALL_DIR="$HOME/.dopple/cli"
@@ -69,6 +70,11 @@ mkdir -p "$HOME/.local/bin"
 ln -sf "$INSTALL_DIR/dist/cli.js" "$HOME/.local/bin/dopple"
 echo "  Linked to ~/.local/bin/dopple ✓"
 
+echo ""
+echo "Done! Run 'dopple login' to authenticate."
+)
+
+# PATH update runs outside subshell so it persists in the user's session
 if ! echo "$PATH" | tr ':' '\n' | grep -qE "\.local/bin"; then
   LINE='export PATH="$HOME/.local/bin:$PATH"'
   for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
@@ -79,6 +85,3 @@ if ! echo "$PATH" | tr ':' '\n' | grep -qE "\.local/bin"; then
   done
   export PATH="$HOME/.local/bin:$PATH"
 fi
-
-echo ""
-echo "Done! Run 'dopple login' to authenticate."
