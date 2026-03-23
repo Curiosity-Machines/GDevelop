@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CLI_DIR="$SCRIPT_DIR/scripts/dopple"
+INSTALL_DIR="$HOME/.dopple/cli"
 
 echo "Installing dopple CLI..."
 
-# Check for Node.js
 if ! command -v node &>/dev/null; then
   echo "Error: Node.js is required. Install it from https://nodejs.org" >&2
   exit 1
@@ -18,30 +16,24 @@ if [ "$NODE_VERSION" -lt 18 ]; then
   exit 1
 fi
 
-# Install dependencies and build
-cd "$CLI_DIR"
-npm install
-npm run build
+# Fetch source
+rm -rf "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+curl -sL https://github.com/Curiosity-Machines/claude-skills/archive/refs/heads/main.tar.gz \
+  | tar xz --strip-components=3 claude-skills-main/dopple-deploy/scripts/dopple
 
-# Link globally — try npm link first, fall back to ~/bin symlink
-if npm link 2>/dev/null; then
-  echo ""
-  echo "Done! Run 'dopple login' to authenticate with GitHub."
-  echo "Then 'dopple deploy' from any project with a dopple.toml."
+# Build
+npm install --silent
+npm run build --silent
+
+# Link
+mkdir -p "$HOME/.local/bin"
+ln -sf "$INSTALL_DIR/dist/cli.js" "$HOME/.local/bin/dopple"
+
+if echo "$PATH" | tr ':' '\n' | grep -qE "(\.local/bin|\.dopple)"; then
+  echo "Done! Run 'dopple login' to authenticate."
 else
-  mkdir -p "$HOME/bin"
-  ln -sf "$CLI_DIR/dist/cli.js" "$HOME/bin/dopple"
-
-  if echo "$PATH" | tr ':' '\n' | grep -q "$HOME/bin"; then
-    echo ""
-    echo "Done! Run 'dopple login' to authenticate with GitHub."
-    echo "Then 'dopple deploy' from any project with a dopple.toml."
-  else
-    echo ""
-    echo "Done! Installed to ~/bin/dopple."
-    echo "Add ~/bin to your PATH by adding this to your shell config:"
-    echo "  export PATH=\"\$HOME/bin:\$PATH\""
-    echo ""
-    echo "Then run 'dopple login' to authenticate with GitHub."
-  fi
+  echo "Done! Add ~/.local/bin to your PATH:"
+  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
 fi
