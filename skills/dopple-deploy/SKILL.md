@@ -76,7 +76,7 @@ Compose the message as a single string with `\n` between lines. **Do not wrap UR
 🎮 Orbital Clock v4
 A real-time clock with orbital planet rings and a countdown timer.
 What's new: fixed collision detection, added countdown sfx
-QR: https://studio.dopple.com/qr/abc-123
+QR: https://dopple-studio.pages.dev/qr/abc-123
 API: https://onljswkegixyjjhpcldn.supabase.co/functions/v1/get-manifest?id=abc-123
 By: mike (michael@dopple.com)
 ```
