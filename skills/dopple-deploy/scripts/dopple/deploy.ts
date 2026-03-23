@@ -12,6 +12,7 @@ export interface DeployResult {
   version: number;
   manifest_url: string;
   qr_url: string;
+  qr_image_path?: string;
 }
 
 const DEFAULT_SUPABASE_URL = 'https://onljswkegixyjjhpcldn.supabase.co';

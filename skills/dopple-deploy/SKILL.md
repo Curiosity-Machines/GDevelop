@@ -148,16 +148,19 @@ The skill defaults to `--no-smoke` since Claude Code/Codex environments typicall
 The CLI outputs a machine-readable line after human-readable output:
 
 ```
-__DEPLOY_RESULT__{"id":"uuid","name":"my-game","version":3,"manifest_url":"https://...","qr_url":"https://..."}
+__DEPLOY_RESULT__{"id":"uuid","name":"my-game","version":3,"manifest_url":"https://...","qr_url":"https://...","qr_image_path":"/path/to/.dopple-qr.png"}
 ```
 
 Parse this line from the Bash output to extract deploy results for Slack posting.
+
+The `qr_image_path` is a local 512px PNG QR code encoding the QR page URL. Use this file when uploading to Slack so the QR code is visible inline without clicking a link.
 
 ## Slack Notification Logic
 
 1. Check if `slack_send_message` tool is available (Slack MCP connected)
 2. If available:
    - Read `dopple.toml` for `[slack] channel` (default: `#qr-f3st-26`)
+   - Upload `qr_image_path` to the channel as a canvas/image attachment
    - Post message with activity name, QR page URL, manifest URL, deployer, version
 3. If not available:
    - Present the URLs to the user for manual sharing
