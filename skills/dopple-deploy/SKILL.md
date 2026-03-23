@@ -76,14 +76,16 @@ Compose the message as a single string with `\n` between lines. **Do not wrap UR
 🎮 Orbital Clock v4
 A real-time clock with orbital planet rings and a countdown timer.
 What's new: fixed collision detection, added countdown sfx
-QR: https://dopple-studio.pages.dev/qr/abc-123
-API: https://onljswkegixyjjhpcldn.supabase.co/functions/v1/get-manifest?id=abc-123
+QR: {qr_url from __DEPLOY_RESULT__}
+API: {manifest_url from __DEPLOY_RESULT__}
 By: mike (michael@dopple.com)
 ```
 
+Use the URLs verbatim from the `__DEPLOY_RESULT__` JSON — never construct them manually. The backend returns the correct studio domain.
+
 If `qr_image_url` is present in the deploy result, post it as a second message immediately after — Slack renders `.png` URLs inline:
 ```
-https://...supabase.co/storage/v1/object/public/activity-bundles/.../qr.png
+{qr_image_url from __DEPLOY_RESULT__}
 ```
 
 Always show both the message draft and the image URL to the user for approval before posting.
