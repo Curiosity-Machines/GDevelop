@@ -9,3 +9,4 @@ export { PublicQRPage } from './PublicQRPage';
 export { ProtectedRoute } from './ProtectedRoute';
 export { OfflineIndicator } from './OfflineIndicator';
 export { PWAUpdatePrompt } from './PWAUpdatePrompt';
+export { SDKPage } from './SDKPage';

@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* iA Writer Duo — the Loop system font (SIL Open Font License) */
+@font-face {
+  font-family: 'iA Writer Duo';
+  src: url('/fonts/iAWriterDuoS-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'iA Writer Duo';
+  src: url('/fonts/iAWriterDuoS-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Custom theme extending Tailwind */
 @theme {
   --color-dopple-bg: #f9fafb;
@@ -7,7 +23,7 @@
   --color-dopple-accent: #6366f1;
   --color-dopple-text: #111827;
   --color-dopple-muted: #6b7280;
-  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-sans: 'iA Writer Duo', 'Courier New', monospace;
 }
 
 /* Base styles */

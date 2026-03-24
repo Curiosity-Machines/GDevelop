@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import App from './App'
-import { Auth, ManifestPage, PublicQRPage, ProtectedRoute } from './components'
+import { Auth, ManifestPage, PublicQRPage, ProtectedRoute, SDKPage } from './components'
 
 export const router = createBrowserRouter([
   // Public routes (no auth required)
@@ -23,6 +23,10 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: <App />,
+      },
+      {
+        path: '/sdk',
+        element: <SDKPage />,
       },
       {
         path: '/create',

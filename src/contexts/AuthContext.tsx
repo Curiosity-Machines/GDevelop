@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  hasSDKAccess: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<void>;
@@ -95,12 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const hasSDKAccess = !!user?.app_metadata?.sdk_access;
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         loading,
+        hasSDKAccess,
         signUp,
         signIn,
         signInWithOAuth,
