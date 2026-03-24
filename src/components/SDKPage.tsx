@@ -408,43 +408,52 @@ const SDK_INSTALLS = [
 function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
 
-  const handleCopy = useCallback(async () => {
+  const handleCopy = useCallback(() => {
     setStatus('loading');
 
-    // Generate signed URLs for all files in this install
-    const lines: string[] = [];
-    for (const f of install.files) {
-      const { data, error } = await supabase.storage
-        .from('sdk-assets')
-        .createSignedUrl(f.key, 3600);
+    // Safari requires clipboard.write() to be called synchronously in the
+    // gesture handler. Pass a Promise to ClipboardItem so the async signed-URL
+    // fetch resolves later while the write is already queued.
+    const textPromise = (async (): Promise<Blob> => {
+      const lines: string[] = [];
+      for (const f of install.files) {
+        const { data, error } = await supabase.storage
+          .from('sdk-assets')
+          .createSignedUrl(f.key, 3600);
 
-      if (error || !data?.signedUrl) {
-        setStatus('error');
-        setTimeout(() => setStatus('idle'), 2000);
-        return;
+        if (error || !data?.signedUrl) {
+          setStatus('error');
+          setTimeout(() => setStatus('idle'), 2000);
+          throw new Error('Failed to generate signed URL');
+        }
+
+        const dir = f.dest.substring(0, f.dest.lastIndexOf('/'));
+        if (dir && dir !== '.') {
+          lines.push(`mkdir -p ${dir}`);
+        }
+        lines.push(`curl -sL "${data.signedUrl}" \\\n  -o ${f.dest}`);
       }
 
-      // Create parent dir if needed
-      const dir = f.dest.substring(0, f.dest.lastIndexOf('/'));
-      if (dir && dir !== '.') {
-        lines.push(`mkdir -p ${dir}`);
+      if (install.id === 'dopple-deploy') {
+        lines.push(`grep -q 'dopple/cli.cjs' ~/.zshrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.zshrc`);
+        lines.push(`grep -q 'dopple/cli.cjs' ~/.bashrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.bashrc`);
+        lines.push(`alias dopple='node ~/.dopple/cli.cjs'`);
+        lines.push(`echo "dopple installed"`);
       }
-      lines.push(`curl -sL "${data.signedUrl}" \\\n  -o ${f.dest}`);
-    }
 
-    // For dopple-deploy, persist the alias
-    if (install.id === 'dopple-deploy') {
-      lines.push(`grep -q 'dopple/cli.cjs' ~/.zshrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.zshrc`);
-      lines.push(`grep -q 'dopple/cli.cjs' ~/.bashrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.bashrc`);
-      lines.push(`alias dopple='node ~/.dopple/cli.cjs'`);
-      lines.push(`echo "dopple installed"`)
-    }
+      const script = `bash -c '${lines.join(' && ').replace(/'/g, "'\\''")}'`;
+      return new Blob([script], { type: 'text/plain' });
+    })();
 
-    // Wrap in bash -c so it runs as one unit in any shell
-    const script = `bash -c '${lines.join(' && ').replace(/'/g, "'\\''")}'`;
-    await navigator.clipboard.writeText(script);
-    setStatus('copied');
-    setTimeout(() => setStatus('idle'), 8000);
+    navigator.clipboard.write([
+      new ClipboardItem({ 'text/plain': textPromise }),
+    ]).then(() => {
+      setStatus('copied');
+      setTimeout(() => setStatus('idle'), 8000);
+    }).catch(() => {
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 2000);
+    });
   }, [install]);
 
   return (
