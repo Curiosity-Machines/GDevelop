@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { useActivities } from './hooks/useActivities';
+import { Link } from 'react-router-dom';
 import { Gallery, ProjectForm, AccountSettings } from './components';
 import type { ActivityWithRelations, ActivityFormData } from './types';
 
@@ -14,7 +15,7 @@ interface AppProps {
 function App({ initialView }: AppProps) {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id: string }>();
-  const { signOut } = useAuth();
+  const { signOut, hasSDKAccess } = useAuth();
   const { activities, loading: activitiesLoading, uploadProgress, addActivity, updateActivity, deleteActivity } = useActivities();
   const [showAccountSettings, setShowAccountSettings] = useState(false);
 
@@ -77,6 +78,14 @@ function App({ initialView }: AppProps) {
             >
               + New Activity
             </button>
+          )}
+          {hasSDKAccess && (
+            <Link
+              to="/sdk"
+              className="px-5 py-2.5 bg-transparent text-gray-600 text-sm border border-gray-200 rounded-lg no-underline transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-300"
+            >
+              SDK
+            </Link>
           )}
           <button
             className="px-5 py-2.5 bg-transparent text-gray-600 text-sm border border-gray-200 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-300"

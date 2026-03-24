@@ -382,46 +382,90 @@ const NAV_ITEMS = [
 ];
 
 // SDK asset files in Supabase Storage
-const SDK_FILES = [
-  { key: 'loop-dev.md', dest: '~/.claude/commands/loop-dev.md', label: 'Loop Dev Skill' },
-  { key: 'loop-sdk-dx.d.ts', dest: 'loop-sdk-dx.d.ts', label: 'TypeScript Types' },
-  { key: 'dopple-deploy.md', dest: '~/.claude/commands/dopple-deploy.md', label: 'Dopple Deploy Skill' },
+const SDK_INSTALLS = [
+  {
+    id: 'loop-dev',
+    label: 'Loop Dev',
+    desc: 'Claude Code skill for building Loop activities',
+    files: [
+      { key: 'loop-dev.md', dest: '~/.claude/commands/loop-dev.md' },
+      { key: 'loop-sdk-dx.d.ts', dest: 'loop-sdk-dx.d.ts' },
+    ],
+  },
+  {
+    id: 'dopple-deploy',
+    label: 'Dopple Deploy',
+    desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
+    files: [
+      { key: 'dopple-deploy.md', dest: '~/.claude/commands/dopple-deploy.md' },
+      { key: 'dopple-cli.cjs', dest: '~/.dopple/cli.cjs' },
+    ],
+  },
 ] as const;
 
-function InstallButton({ fileKey, dest, label }: { fileKey: string; dest: string; label: string }) {
+function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
 
   const handleCopy = useCallback(async () => {
     setStatus('loading');
-    const { data, error } = await supabase.storage
-      .from('sdk-assets')
-      .createSignedUrl(fileKey, 3600); // 1 hour
 
-    if (error || !data?.signedUrl) {
-      setStatus('error');
-      setTimeout(() => setStatus('idle'), 2000);
-      return;
+    // Generate signed URLs for all files in this install
+    const lines: string[] = [];
+    for (const f of install.files) {
+      const { data, error } = await supabase.storage
+        .from('sdk-assets')
+        .createSignedUrl(f.key, 3600);
+
+      if (error || !data?.signedUrl) {
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 2000);
+        return;
+      }
+
+      // Create parent dir if needed
+      const dir = f.dest.substring(0, f.dest.lastIndexOf('/'));
+      if (dir && dir !== '.') {
+        lines.push(`mkdir -p ${dir}`);
+      }
+      lines.push(`curl -sL "${data.signedUrl}" \\\n  -o ${f.dest}`);
     }
 
-    const cmd = `curl -sL "${data.signedUrl}" \\\n  -o ${dest}`;
-    await navigator.clipboard.writeText(cmd);
+    // For dopple-deploy, add PATH setup
+    if (install.id === 'dopple-deploy') {
+      lines.push(`# Add dopple to PATH (add to your shell profile for persistence)`);
+      lines.push(`alias dopple='node ~/.dopple/cli.cjs'`);
+    }
+
+    await navigator.clipboard.writeText(lines.join('\n'));
     setStatus('copied');
-    setTimeout(() => setStatus('idle'), 2000);
-  }, [fileKey, dest]);
+    setTimeout(() => setStatus('idle'), 8000);
+  }, [install]);
 
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-left cursor-pointer border-0 transition-colors"
+      className="flex items-center gap-4 w-full px-5 py-4 rounded-xl text-left cursor-pointer border-0 transition-colors"
       style={{
-        background: status === 'copied' ? '#00d4ff10' : '#181822',
-        border: `1px solid ${status === 'copied' ? '#00d4ff30' : '#ffffff08'}`,
+        background: status === 'copied' ? '#00d4ff08' : '#181822',
+        border: `1px solid ${status === 'copied' ? '#00d4ff25' : '#ffffff08'}`,
         color: '#e0e0e8',
       }}
     >
-      <span className="text-[14px] flex-1">{label}</span>
-      <span className="text-[11px] shrink-0" style={{ color: status === 'copied' ? '#00d4ff' : status === 'error' ? '#ff6666' : '#9999b0' }}>
-        {status === 'loading' ? '...' : status === 'copied' ? 'copied!' : status === 'error' ? 'error' : 'copy install cmd'}
+      <div className="flex-1 min-w-0">
+        <div className="text-[15px] font-semibold">{install.label}</div>
+        <div className="text-[12px] mt-0.5" style={{ color: '#9999b0' }}>{install.desc}</div>
+        <div className="text-[11px] mt-1.5" style={{ color: '#707088' }}>
+          {install.files.map(f => f.key).join(', ')}
+        </div>
+      </div>
+      <span
+        className="text-[12px] shrink-0 px-3 py-1.5 rounded-lg"
+        style={{
+          background: status === 'copied' ? '#00d4ff15' : '#ffffff06',
+          color: status === 'copied' ? '#00d4ff' : status === 'error' ? '#ff6666' : '#9999b0',
+        }}
+      >
+        {status === 'loading' ? '...' : status === 'copied' ? 'copied!' : status === 'error' ? 'error' : 'copy install'}
       </span>
     </button>
   );
@@ -504,7 +548,7 @@ export function SDKPage() {
             style={{ color: '#a8a8be' }}
           >
             Create WebView activities for a round, motion-controlled handheld device.
-            IMU, haptics, BLE multiplayer, RGB LED — all from JavaScript.
+            IMU, haptics, BLE multiplayer, RGB LED — using standard web technologies and our TypeScript SDK.
           </p>
 
           {/* Spec pills */}
@@ -561,13 +605,13 @@ export function SDKPage() {
           <SectionHeading number="01" title="Quick Start" />
 
           <div className="flex flex-col gap-8 mt-8">
-            <Step number={1} title="Install skills and types">
+            <Step number={1} title="Install skills and tools">
               <p className="text-[13px] m-0 mb-3" style={{ color: '#9999b0' }}>
-                Click to copy a <code className="text-[12px] px-1 py-0.5 rounded" style={{ background: '#181822', color: '#00d4ff' }}>curl</code> install command (signed URL, expires in 1 hour).
+                Click to copy a one-liner install script. Signed URLs expire in 1 hour.
               </p>
-              <div className="flex flex-col gap-2">
-                {SDK_FILES.map((f) => (
-                  <InstallButton key={f.key} fileKey={f.key} dest={f.dest} label={f.label} />
+              <div className="flex flex-col gap-3">
+                {SDK_INSTALLS.map((install) => (
+                  <SkillInstallCard key={install.id} install={install} />
                 ))}
               </div>
             </Step>
