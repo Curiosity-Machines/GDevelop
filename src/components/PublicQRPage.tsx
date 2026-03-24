@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
-import { getManifestApiUrl } from '../lib/manifest';
+import { getManifestBaseUrl } from '../lib/manifest';
 
 export function PublicQRPage() {
   const { id: activityId } = useParams<{ id: string }>();
@@ -42,7 +42,7 @@ export function PublicQRPage() {
     fetchActivity();
   }, [activityId]);
 
-  const apiUrl = getManifestApiUrl(activityId || '');
+  const qrUrl = getManifestBaseUrl(activityId || '');
 
   if (loading) {
     return (
@@ -77,7 +77,7 @@ export function PublicQRPage() {
         <div className="relative z-[2] bg-white rounded-xl p-4 shadow-md shrink-0 max-sm:p-3 [&>svg]:w-80 [&>svg]:h-80 max-sm:[&>svg]:w-full max-sm:[&>svg]:max-w-[280px] max-sm:[&>svg]:h-auto">
           <QRCodeSVG
             id={`public-qr-${activityId}`}
-            value={apiUrl}
+            value={qrUrl}
             size={400}
             level="M"
             includeMargin

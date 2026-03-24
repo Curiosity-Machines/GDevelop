@@ -28,7 +28,7 @@ vi.mock('qrcode.react', () => ({
 
 // Mock manifest functions
 vi.mock('../../lib/manifest', () => ({
-  getManifestApiUrl: (id: string) => `https://api.example.com/manifest?id=${id}&format=json`,
+  getManifestBaseUrl: (id: string) => `https://api.example.com/manifest?id=${id}`,
 }))
 
 const renderPublicQRPage = (id: string = 'test-id') => {
