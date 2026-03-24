@@ -430,13 +430,17 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
       lines.push(`curl -sL "${data.signedUrl}" \\\n  -o ${f.dest}`);
     }
 
-    // For dopple-deploy, add alias
+    // For dopple-deploy, persist the alias
     if (install.id === 'dopple-deploy') {
+      lines.push(`grep -q 'dopple/cli.cjs' ~/.zshrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.zshrc`);
+      lines.push(`grep -q 'dopple/cli.cjs' ~/.bashrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.bashrc`);
       lines.push(`alias dopple='node ~/.dopple/cli.cjs'`);
-      lines.push(`echo "Add this to your shell profile: alias dopple='node ~/.dopple/cli.cjs'"`);
+      lines.push(`echo "dopple installed"`)
     }
 
-    await navigator.clipboard.writeText(lines.join('\n'));
+    // Wrap in bash -c so it runs as one unit in any shell
+    const script = `bash -c '${lines.join(' && ').replace(/'/g, "'\\''")}'`;
+    await navigator.clipboard.writeText(script);
     setStatus('copied');
     setTimeout(() => setStatus('idle'), 8000);
   }, [install]);
