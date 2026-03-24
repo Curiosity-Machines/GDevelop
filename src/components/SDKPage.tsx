@@ -551,7 +551,7 @@ export function SDKPage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Build for Loop
+            Build for the Loop
           </h1>
           <p
             className="text-lg md:text-xl max-w-[560px] m-0 mb-10 leading-relaxed"
