@@ -16,7 +16,7 @@ const DEVICE_SPECS = [
 const BUTTONS = [
   { id: 'A', location: 'Front of handle', role: 'Context / options — "what can this do?"' },
   { id: 'B', location: 'Rear of handle', role: 'Action / trigger — "do this"' },
-  { id: 'C', location: 'Top / side', role: 'Free — game-defined (native only)' },
+  { id: 'C', location: 'Top / side', role: 'Free — game-defined' },
 ];
 
 const SIZING_RULES = [
