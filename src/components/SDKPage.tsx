@@ -386,6 +386,7 @@ const SDK_INSTALLS = [
   {
     id: 'loop-dev',
     label: 'Loop Dev',
+    version: 'SDK v0.0.6',
     desc: 'Claude Code skill for building Loop activities',
     files: [
       { key: 'loop-dev.md', dest: '~/.claude/commands/loop-dev.md' },
@@ -395,6 +396,7 @@ const SDK_INSTALLS = [
   {
     id: 'dopple-deploy',
     label: 'Dopple Deploy',
+    version: 'CLI v0.2.1',
     desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
     files: [
       { key: 'dopple-deploy.md', dest: '~/.claude/commands/dopple-deploy.md' },
@@ -456,7 +458,10 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
       }}
     >
       <div className="flex-1 min-w-0">
-        <div className="text-[15px] font-semibold">{install.label}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-[15px] font-semibold">{install.label}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#00d4ff10', color: '#00d4ff' }}>{install.version}</span>
+        </div>
         <div className="text-[12px] mt-0.5" style={{ color: '#9999b0' }}>{install.desc}</div>
         <div className="text-[11px] mt-1.5" style={{ color: '#707088' }}>
           {install.files.map(f => f.key).join(', ')}
