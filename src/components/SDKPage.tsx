@@ -430,10 +430,10 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
       lines.push(`curl -sL "${data.signedUrl}" \\\n  -o ${f.dest}`);
     }
 
-    // For dopple-deploy, add PATH setup
+    // For dopple-deploy, add alias
     if (install.id === 'dopple-deploy') {
-      lines.push(`# Add dopple to PATH (add to your shell profile for persistence)`);
       lines.push(`alias dopple='node ~/.dopple/cli.cjs'`);
+      lines.push(`echo "Add this to your shell profile: alias dopple='node ~/.dopple/cli.cjs'"`);
     }
 
     await navigator.clipboard.writeText(lines.join('\n'));
@@ -528,10 +528,11 @@ export function SDKPage() {
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 pt-16 pb-12">
           <div
-            className="text-[11px] uppercase tracking-[0.3em] mb-6"
+            className="text-[11px] uppercase tracking-[0.3em] mb-6 flex items-center gap-3"
             style={{ color: '#00d4ff', fontFamily: "var(--font-family-sans)" }}
           >
-            Dopple Loop SDK
+            <span>Dopple Loop SDK</span>
+            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>38362fd</span>
           </div>
           <h1
             className="text-5xl md:text-7xl font-extrabold m-0 mb-4"
