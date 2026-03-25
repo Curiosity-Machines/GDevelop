@@ -396,7 +396,7 @@ const SDK_INSTALLS = [
   {
     id: 'dopple-deploy',
     label: 'Dopple Deploy',
-    version: 'v0.1.1',
+    version: 'v0.3.0',
     desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
     files: [
       { key: 'dopple-deploy.md', dest: '~/.claude/commands/dopple-deploy.md' },
@@ -550,7 +550,7 @@ export function SDKPage() {
             style={{ color: '#00d4ff', fontFamily: "var(--font-family-sans)" }}
           >
             <span>Dopple Loop SDK</span>
-            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>60c1125</span>
+            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>02b592f</span>
           </div>
           <h1
             className="text-5xl md:text-7xl font-extrabold m-0 mb-4"
