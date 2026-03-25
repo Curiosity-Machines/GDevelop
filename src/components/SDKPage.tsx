@@ -387,16 +387,17 @@ const NAV_ITEMS = [
   { id: 'deploy', label: 'Deploy' },
 ];
 
-// SDK asset files in Supabase Storage
+// SDK install definitions — each has an install script + payload files
 const SDK_INSTALLS = [
   {
     id: 'loop-dev',
     label: 'Loop Dev',
     version: 'SDK v0.0.7',
     desc: 'Claude Code skill for building Loop activities',
-    files: [
-      { key: 'loop-dev.md', dest: '~/.claude/commands/loop-dev.md' },
-      { key: 'loop-sdk-dx.d.ts', dest: 'loop-sdk-dx.d.ts' },
+    installer: 'loop-dev-install.sh',
+    payloads: [
+      { key: 'loop-dev.md', flag: '--skill-url' },
+      { key: 'loop-sdk-dx.d.ts', flag: '--types-url' },
     ],
   },
   {
@@ -404,9 +405,10 @@ const SDK_INSTALLS = [
     label: 'Dopple Deploy',
     version: 'v0.3.0',
     desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
-    files: [
-      { key: 'dopple-deploy.md', dest: '~/.claude/commands/dopple-deploy.md' },
-      { key: 'dopple-cli.cjs', dest: '~/.dopple/cli.cjs' },
+    installer: 'dopple-deploy-install.sh',
+    payloads: [
+      { key: 'dopple-deploy.md', flag: '--skill-url' },
+      { key: 'dopple-cli.cjs', flag: '--cli-url' },
     ],
   },
 ] as const;
@@ -421,11 +423,23 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
     // gesture handler. Pass a Promise to ClipboardItem so the async signed-URL
     // fetch resolves later while the write is already queued.
     const textPromise = (async (): Promise<Blob> => {
-      const lines: string[] = [];
-      for (const f of install.files) {
+      // Generate signed URL for the install script itself
+      const { data: installerData, error: installerError } = await supabase.storage
+        .from('sdk-assets')
+        .createSignedUrl(install.installer, 3600);
+
+      if (installerError || !installerData?.signedUrl) {
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 2000);
+        throw new Error('Failed to generate installer URL');
+      }
+
+      // Generate signed URLs for each payload file
+      const flags: string[] = [];
+      for (const p of install.payloads) {
         const { data, error } = await supabase.storage
           .from('sdk-assets')
-          .createSignedUrl(f.key, 3600);
+          .createSignedUrl(p.key, 3600);
 
         if (error || !data?.signedUrl) {
           setStatus('error');
@@ -433,21 +447,10 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
           throw new Error('Failed to generate signed URL');
         }
 
-        const dir = f.dest.substring(0, f.dest.lastIndexOf('/'));
-        if (dir && dir !== '.') {
-          lines.push(`mkdir -p ${dir}`);
-        }
-        lines.push(`curl -sL "${data.signedUrl}" \\\n  -o ${f.dest}`);
+        flags.push(`${p.flag}="${data.signedUrl}"`);
       }
 
-      if (install.id === 'dopple-deploy') {
-        lines.push(`grep -q 'dopple/cli.cjs' ~/.zshrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.zshrc`);
-        lines.push(`grep -q 'dopple/cli.cjs' ~/.bashrc 2>/dev/null || echo "alias dopple='node ~/.dopple/cli.cjs'" >> ~/.bashrc`);
-        lines.push(`alias dopple='node ~/.dopple/cli.cjs'`);
-        lines.push(`echo "dopple installed"`);
-      }
-
-      const script = `bash -c '${lines.join(' && ').replace(/'/g, "'\\''")}'`;
+      const script = `bash <(curl -sL "${installerData.signedUrl}") \\\n  ${flags.join(' \\\n  ')}`;
       return new Blob([script], { type: 'text/plain' });
     })();
 
@@ -479,7 +482,7 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
         </div>
         <div className="text-[12px] mt-0.5" style={{ color: '#9999b0' }}>{install.desc}</div>
         <div className="text-[11px] mt-1.5" style={{ color: '#707088' }}>
-          {install.files.map(f => f.key).join(', ')}
+          {install.payloads.map(p => p.key).join(', ')}
         </div>
       </div>
       <span
