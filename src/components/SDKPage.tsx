@@ -253,11 +253,17 @@ Loop.led.off();`,
     icon: '⏻',
     desc: 'Lifecycle, rotation lock, launch child activities, quit',
     types: `interface SystemAPI {
+  // Launch a child activity. Returns a Promise that
+  // resolves when the child calls Loop.system.quit().
+  // Max depth: 3 (parent → child → grandchild).
+  // Rejects if depth exceeded or bridge unavailable.
+  launch(manifestUrl: string): Promise<void>;
+
+  getVersion(): { versionName: string; versionCode: number };
   isFreeRotateEnabled(): boolean;
   setFreeRotate(enabled: boolean): { success: boolean };
-  quit(): void;  // fire-and-forget exit
-  launch(manifestUrl: string): Promise<void>;  // open child activity
-  getVersion(): { versionName: string; versionCode: number };
+  quit(): void;  // fire-and-forget exit to parent or gallery
+
   on(event: 'pause', handler: (e: {
     reason: 'sleep' | 'settings'
   }) => void): void;
@@ -267,24 +273,27 @@ Loop.led.off();`,
   }) => void): void;
   off(event: string, handler: Function): void;
 }`,
-    example: `// Handle pause/resume
-Loop.system.on('pause', e => {
-  if (e.reason === 'sleep') pauseGame();
-});
+    example: `// Launch another activity from Dopple Studio.
+// Pass the manifest API URL (from the activity's QR page).
+// Your activity is paused while the child runs.
+// The promise resolves when the child calls quit().
+const url = 'https://onljs...supabase.co/functions/v1/get-manifest?id=<uuid>';
+try {
+  await Loop.system.launch(url);
+  // Child quit — we're back, resume our game
+} catch (e) {
+  // Max depth (3) exceeded or bridge unavailable
+}
+
+// quit() returns to the parent activity (or gallery if root)
+Loop.system.quit();
+
+// Pause/resume — fires when child launches or settings open
+Loop.system.on('pause', e => pauseGame());
 Loop.system.on('resume', e => resumeGame());
 
-// Launch a child activity (max depth 3)
-await Loop.system.launch(manifestUrl);
-
-// Check native version
-const { versionName } = Loop.system.getVersion();
-
-// Lock rotation for fixed-orientation games
-Loop.system.setFreeRotate(false);
-
-// Save and quit
-Loop.storage.setItem('state', JSON.stringify(state));
-Loop.system.quit();`,
+// Check native app version
+const { versionName, versionCode } = Loop.system.getVersion();`,
   },
 ];
 
