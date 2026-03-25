@@ -554,7 +554,7 @@ export function SDKPage() {
             style={{ color: '#00d4ff', fontFamily: "var(--font-family-sans)" }}
           >
             <span>Dopple Loop SDK</span>
-            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>f441e32</span>
+            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>ec6c04d</span>
           </div>
           <h1
             className="text-5xl md:text-7xl font-extrabold m-0 mb-4"
