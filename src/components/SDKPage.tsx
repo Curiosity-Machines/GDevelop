@@ -41,39 +41,25 @@ const SDK_NAMESPACES: SDKNamespace[] = [
     id: 'motion',
     name: 'Motion',
     icon: '◎',
-    desc: 'IMU data — gravity, orientation quaternion, frame deltas',
-    types: `interface MotionOptions {
-  frequency?: number;   // Hz, 1–240 (default 60)
-  smoothing?: number;   // 0.0=max smooth, 1.0=raw (default 0.1)
-}
-interface MotionData {
-  gravity: Vector3;
-  smoothGravity: Vector3;
-  orientation: Quaternion;
-  delta: Vector3;
-  timestamp: number;
-  sequenceNumber: number;
-}
-interface MotionSubscription {
-  readonly id: string;
-  readonly active: boolean;
-  on(event: 'data', handler: (data: MotionData) => void): this;
-  off(event: 'data', handler: (data: MotionData) => void): this;
-  stop(): void;
-}`,
-    example: `const sub = await Loop.motion.start({
-  frequency: 60,
-  smoothing: 0.1
+    desc: 'IMU data — under construction, use Web APIs for now',
+    types: `// Loop.motion is under construction.
+// Use the standard Web APIs instead:
+//   - DeviceOrientationEvent (alpha, beta, gamma)
+//   - DeviceMotionEvent (acceleration, rotationRate)
+// These work on the Loop without permission prompts.`,
+    example: `// Orientation (tilt angles)
+window.addEventListener('deviceorientation', e => {
+  const { alpha, beta, gamma } = e;
+  // alpha: compass heading (0–360)
+  // beta:  front-back tilt (-180–180)
+  // gamma: left-right tilt (-90–90)
 });
 
-sub.on('data', data => {
-  // data.orientation — Quaternion { x, y, z, w }
-  // data.smoothGravity — Vector3 { x, y, z }
-  // data.delta — frame-to-frame change
-});
-
-// Always clean up
-window.addEventListener('beforeunload', () => sub.stop());`,
+// Acceleration + rotation rate
+window.addEventListener('devicemotion', e => {
+  const { x, y, z } = e.accelerationIncludingGravity;
+  const { alpha, beta, gamma } = e.rotationRate;
+});`,
   },
   {
     id: 'buttons',
