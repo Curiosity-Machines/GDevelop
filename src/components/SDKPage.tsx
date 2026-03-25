@@ -251,11 +251,13 @@ Loop.led.off();`,
     id: 'system',
     name: 'System',
     icon: '⏻',
-    desc: 'Lifecycle, rotation lock, quit to gallery',
+    desc: 'Lifecycle, rotation lock, launch child activities, quit',
     types: `interface SystemAPI {
   isFreeRotateEnabled(): boolean;
   setFreeRotate(enabled: boolean): { success: boolean };
   quit(): void;  // fire-and-forget exit
+  launch(manifestUrl: string): Promise<void>;  // open child activity
+  getVersion(): { versionName: string; versionCode: number };
   on(event: 'pause', handler: (e: {
     reason: 'sleep' | 'settings'
   }) => void): void;
@@ -269,9 +271,13 @@ Loop.led.off();`,
 Loop.system.on('pause', e => {
   if (e.reason === 'sleep') pauseGame();
 });
-Loop.system.on('resume', e => {
-  resumeGame();
-});
+Loop.system.on('resume', e => resumeGame());
+
+// Launch a child activity (max depth 3)
+await Loop.system.launch(manifestUrl);
+
+// Check native version
+const { versionName } = Loop.system.getVersion();
 
 // Lock rotation for fixed-orientation games
 Loop.system.setFreeRotate(false);
@@ -386,7 +392,7 @@ const SDK_INSTALLS = [
   {
     id: 'loop-dev',
     label: 'Loop Dev',
-    version: 'SDK v0.0.6',
+    version: 'SDK v0.0.7',
     desc: 'Claude Code skill for building Loop activities',
     files: [
       { key: 'loop-dev.md', dest: '~/.claude/commands/loop-dev.md' },
@@ -550,7 +556,7 @@ export function SDKPage() {
             style={{ color: '#00d4ff', fontFamily: "var(--font-family-sans)" }}
           >
             <span>Dopple Loop SDK</span>
-            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>02b592f</span>
+            <span className="px-2 py-0.5 rounded" style={{ background: '#00d4ff10', fontSize: '10px' }}>f441e32</span>
           </div>
           <h1
             className="text-5xl md:text-7xl font-extrabold m-0 mb-4"
