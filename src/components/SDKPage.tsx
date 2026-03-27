@@ -398,7 +398,7 @@ const SDK_INSTALLS = [
   {
     id: 'dopple-deploy',
     label: 'Dopple Deploy',
-    version: 'v0.3.0',
+    version: 'v0.3.1',
     desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
     installer: 'dopple-deploy-install.sh',
     payloads: [

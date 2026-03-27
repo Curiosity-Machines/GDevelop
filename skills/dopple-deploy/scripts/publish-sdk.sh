@@ -75,7 +75,7 @@ echo "Requesting upload URLs..."
 RESPONSE=$(curl $CURL_PROXY -sf "$PUBLISH_URL" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"files":["dopple-cli.cjs","dopple-deploy.md"]}')
+  -d '{"files":["dopple-cli.cjs","dopple-deploy.md","versions.json"]}')
 
 if [ $? -ne 0 ] || echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
   echo "Error: $(echo "$RESPONSE" | jq -r '.error // "request failed"')"
@@ -85,6 +85,7 @@ fi
 
 CLI_URL=$(echo "$RESPONSE" | jq -r '.uploads[] | select(.file=="dopple-cli.cjs") | .signed_url')
 SKILL_URL=$(echo "$RESPONSE" | jq -r '.uploads[] | select(.file=="dopple-deploy.md") | .signed_url')
+VERSIONS_URL=$(echo "$RESPONSE" | jq -r '.uploads[] | select(.file=="versions.json") | .signed_url')
 
 # --- Upload CLI ---
 echo "Uploading dopple-cli.cjs..."
@@ -105,10 +106,27 @@ curl $CURL_PROXY -sf "$SKILL_URL" \
 
 echo "Uploaded dopple-deploy.md ($(( SKILL_SIZE / 1024 )) KB)"
 
+# --- Build and upload versions.json ---
+CLI_VERSION=$(jq -r '.version' "$DOPPLE_DIR/package.json")
+PUBLISHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+VERSIONS_PATH=$(mktemp /tmp/dopple-versions-XXXXXX.json)
+cat > "$VERSIONS_PATH" <<VJSON
+{"cli":"${CLI_VERSION}","skill":"${CLI_VERSION}","published_at":"${PUBLISHED_AT}"}
+VJSON
+
+echo "Uploading versions.json..."
+curl $CURL_PROXY -sf "$VERSIONS_URL" \
+  -X PUT \
+  -H "Content-Type: application/json" \
+  --data-binary "@$VERSIONS_PATH" > /dev/null
+
+echo "Uploaded versions.json (CLI ${CLI_VERSION})"
+
 # --- Cleanup ---
-rm -f "$BUNDLE_PATH"
+rm -f "$BUNDLE_PATH" "$VERSIONS_PATH"
 
 echo ""
 echo "Published successfully."
 echo "  dopple-cli.cjs:    $(( BUNDLE_SIZE / 1024 )) KB"
 echo "  dopple-deploy.md:  $(( SKILL_SIZE / 1024 )) KB"
+echo "  versions.json:     CLI ${CLI_VERSION}"

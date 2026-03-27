@@ -140,6 +140,21 @@ async function main(): Promise<void> {
         global: { headers: { Authorization: `Bearer ${accessToken}` } },
       });
 
+      // Fetch version info
+      let remoteVersions: { cli: string; skill: string; published_at?: string } | null = null;
+      try {
+        const { data: vData } = await supabase.storage
+          .from('sdk-assets')
+          .download('versions.json');
+        if (vData) {
+          remoteVersions = JSON.parse(await vData.text());
+        }
+      } catch { /* versions.json may not exist yet */ }
+
+      if (remoteVersions) {
+        console.log(`Latest:  CLI ${remoteVersions.cli}  |  Skill ${remoteVersions.skill}`);
+      }
+
       // Download CLI bundle
       console.log('Downloading CLI...');
       const { data: cliData, error: cliErr } = await supabase.storage
@@ -184,7 +199,12 @@ async function main(): Promise<void> {
       await writeFileAsync(join(skillDir, 'dopple-deploy.md'), skillBytes);
       console.log(`Skill updated (${(skillBytes.length / 1024).toFixed(0)} KB)`);
 
-      console.log('Done!');
+      console.log('');
+      if (remoteVersions) {
+        console.log(`Updated to CLI ${remoteVersions.cli}, Skill ${remoteVersions.skill}`);
+      } else {
+        console.log('Done!');
+      }
       break;
     }
 
