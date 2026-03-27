@@ -162,8 +162,11 @@ async function main(): Promise<void> {
         global: { headers: { Authorization: `Bearer ${accessToken}` } },
       });
 
-      // Fetch version info
-      let remoteVersions: { cli: string; skill: string; published_at?: string } | null = null;
+      // Fetch version info + versioned filenames
+      let remoteVersions: {
+        cli: string; skill: string; published_at?: string;
+        files?: { cli: string; skill: string };
+      } | null = null;
       try {
         const { data: vData } = await supabase.storage
           .from('sdk-assets')
@@ -174,14 +177,16 @@ async function main(): Promise<void> {
       } catch { /* versions.json may not exist yet */ }
 
       if (remoteVersions) {
+        console.log(`Current: CLI ${CLI_VERSION}`);
         console.log(`Latest:  CLI ${remoteVersions.cli}  |  Skill ${remoteVersions.skill}`);
       }
 
-      // Download CLI bundle
-      console.log('Downloading CLI...');
+      // Download CLI bundle (versioned filename for CDN cache-busting)
+      const cliFile = remoteVersions?.files?.cli || 'dopple-cli.cjs';
+      console.log(`Downloading ${cliFile}...`);
       const { data: cliData, error: cliErr } = await supabase.storage
         .from('sdk-assets')
-        .download('dopple-cli.cjs');
+        .download(cliFile);
 
       if (cliErr || !cliData) {
         throw new Error(`Failed to download CLI: ${cliErr?.message || 'no data'}`);
@@ -205,11 +210,12 @@ async function main(): Promise<void> {
         console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
       }
 
-      // Download skill
-      console.log('Downloading skill...');
+      // Download skill (versioned filename for CDN cache-busting)
+      const skillFile = remoteVersions?.files?.skill || 'dopple-deploy.md';
+      console.log(`Downloading ${skillFile}...`);
       const { data: skillData, error: skillErr } = await supabase.storage
         .from('sdk-assets')
-        .download('dopple-deploy.md');
+        .download(skillFile);
 
       if (skillErr || !skillData) {
         throw new Error(`Failed to download skill: ${skillErr?.message || 'no data'}`);

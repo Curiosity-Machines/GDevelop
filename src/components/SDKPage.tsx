@@ -383,7 +383,17 @@ const NAV_ITEMS = [
 ];
 
 // SDK install definitions — each has an install script + payload files
-const SDK_INSTALLS = [
+// dopple-deploy uses versioned filenames from versions.json for CDN cache-busting
+type SdkInstall = {
+  id: string;
+  label: string;
+  version: string;
+  desc: string;
+  installer: string;
+  payloads: { key: string; flag: string }[];
+};
+
+const STATIC_INSTALLS: SdkInstall[] = [
   {
     id: 'loop-dev',
     label: 'Loop Dev',
@@ -398,7 +408,7 @@ const SDK_INSTALLS = [
   {
     id: 'dopple-deploy',
     label: 'Dopple Deploy',
-    version: 'v0.3.1',
+    version: 'v0.3.2',
     desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
     installer: 'dopple-deploy-install.sh',
     payloads: [
@@ -406,9 +416,40 @@ const SDK_INSTALLS = [
       { key: 'dopple-cli.cjs', flag: '--cli-url' },
     ],
   },
-] as const;
+];
 
-function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] }) {
+function useVersionedInstalls(): SdkInstall[] {
+  const [installs, setInstalls] = useState<SdkInstall[]>(STATIC_INSTALLS);
+
+  useEffect(() => {
+    // Fetch versions.json for dopple-deploy versioned filenames (CDN cache-busting)
+    supabase.storage.from('sdk-assets').download('versions.json')
+      .then(async ({ data }) => {
+        if (!data) return;
+        const versions = JSON.parse(await data.text()) as {
+          cli: string;
+          skill: string;
+          files?: { cli: string; skill: string };
+        };
+        if (!versions.files) return;
+        setInstalls(prev => prev.map(i =>
+          i.id === 'dopple-deploy' ? {
+            ...i,
+            version: `v${versions.cli}`,
+            payloads: [
+              { key: versions.files!.skill, flag: '--skill-url' },
+              { key: versions.files!.cli, flag: '--cli-url' },
+            ],
+          } : i
+        ));
+      })
+      .catch(() => { /* fall back to static definitions */ });
+  }, []);
+
+  return installs;
+}
+
+function SkillInstallCard({ install }: { install: SdkInstall }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
 
   const handleCopy = useCallback(() => {
@@ -495,6 +536,7 @@ function SkillInstallCard({ install }: { install: typeof SDK_INSTALLS[number] })
 
 export function SDKPage() {
   const [activeSection, setActiveSection] = useState('quickstart');
+  const sdkInstalls = useVersionedInstalls();
 
   // Intersection observer for active nav
   useEffect(() => {
@@ -633,7 +675,7 @@ export function SDKPage() {
                 Click to copy a one-liner install script. Signed URLs expire in 1 hour.
               </p>
               <div className="flex flex-col gap-3">
-                {SDK_INSTALLS.map((install) => (
+                {sdkInstalls.map((install) => (
                   <SkillInstallCard key={install.id} install={install} />
                 ))}
               </div>
