@@ -422,29 +422,51 @@ function useVersionedInstalls(): SdkInstall[] {
   const [installs, setInstalls] = useState<SdkInstall[]>(STATIC_INSTALLS);
 
   useEffect(() => {
-    // Fetch versions.json for dopple-deploy versioned filenames (CDN cache-busting)
-    supabase.storage.from('sdk-assets').download('versions.json')
-      .then(async ({ data }) => {
-        if (!data) return;
-        const versions = JSON.parse(await data.text()) as {
-          cli: string;
-          skill: string;
+    const storage = supabase.storage.from('sdk-assets');
+
+    // Fetch versioned filenames for both skills (CDN cache-busting)
+    Promise.all([
+      storage.download('versions.json').then(async ({ data }) => {
+        if (!data) return null;
+        return JSON.parse(await data.text()) as {
+          cli: string; skill: string;
           files?: { cli: string; skill: string; installer: string };
         };
-        if (!versions.files) return;
-        setInstalls(prev => prev.map(i =>
-          i.id === 'dopple-deploy' ? {
+      }).catch(() => null),
+      storage.download('loop-dev-versions.json').then(async ({ data }) => {
+        if (!data) return null;
+        return JSON.parse(await data.text()) as {
+          skill: string;
+          files?: { skill: string; types: string; installer: string };
+        };
+      }).catch(() => null),
+    ]).then(([doppleVersions, loopVersions]) => {
+      setInstalls(prev => prev.map(i => {
+        if (i.id === 'dopple-deploy' && doppleVersions?.files) {
+          return {
             ...i,
-            version: `v${versions.cli}`,
-            installer: versions.files!.installer,
+            version: `v${doppleVersions.cli}`,
+            installer: doppleVersions.files.installer,
             payloads: [
-              { key: versions.files!.skill, flag: '--skill-url' },
-              { key: versions.files!.cli, flag: '--cli-url' },
+              { key: doppleVersions.files.skill, flag: '--skill-url' },
+              { key: doppleVersions.files.cli, flag: '--cli-url' },
             ],
-          } : i
-        ));
-      })
-      .catch(() => { /* fall back to static definitions */ });
+          };
+        }
+        if (i.id === 'loop-dev' && loopVersions?.files) {
+          return {
+            ...i,
+            version: `SDK v${loopVersions.skill}`,
+            installer: loopVersions.files.installer,
+            payloads: [
+              { key: loopVersions.files.skill, flag: '--skill-url' },
+              { key: loopVersions.files.types, flag: '--types-url' },
+            ],
+          };
+        }
+        return i;
+      }));
+    });
   }, []);
 
   return installs;

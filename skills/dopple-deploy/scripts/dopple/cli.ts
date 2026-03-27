@@ -227,9 +227,53 @@ async function main(): Promise<void> {
       await writeFileAsync(join(skillDir, 'dopple-deploy.md'), skillBytes);
       console.log(`Skill updated (${(skillBytes.length / 1024).toFixed(0)} KB)`);
 
+      // Update loop-dev skill + types if available
+      let loopVersions: {
+        skill: string;
+        files?: { skill: string; types: string; installer: string };
+      } | null = null;
+      try {
+        const { data: lvData } = await supabase.storage
+          .from('sdk-assets')
+          .download('loop-dev-versions.json');
+        if (lvData) {
+          loopVersions = JSON.parse(await lvData.text());
+        }
+      } catch { /* loop-dev versions may not exist yet */ }
+
+      if (loopVersions?.files) {
+        console.log('');
+        console.log(`Updating loop-dev (v${loopVersions.skill})...`);
+
+        const loopSkillFile = loopVersions.files.skill;
+        const { data: loopSkillData } = await supabase.storage
+          .from('sdk-assets')
+          .download(loopSkillFile);
+        if (loopSkillData) {
+          const loopSkillBytes = Buffer.from(await loopSkillData.arrayBuffer());
+          await writeFileAsync(join(skillDir, 'loop-dev.md'), loopSkillBytes);
+          console.log(`  Skill updated (${(loopSkillBytes.length / 1024).toFixed(0)} KB)`);
+        }
+
+        const loopTypesFile = loopVersions.files.types;
+        const { data: loopTypesData } = await supabase.storage
+          .from('sdk-assets')
+          .download(loopTypesFile);
+        if (loopTypesData) {
+          const typesDir = join(homedir(), '.dopple', 'types');
+          await mkdirAsync(typesDir, { recursive: true });
+          const loopTypesBytes = Buffer.from(await loopTypesData.arrayBuffer());
+          await writeFileAsync(join(typesDir, 'loop-sdk-dx.d.ts'), loopTypesBytes);
+          console.log(`  Types updated (${(loopTypesBytes.length / 1024).toFixed(0)} KB)`);
+        }
+      }
+
       console.log('');
-      if (remoteVersions) {
-        console.log(`Updated to CLI ${remoteVersions.cli}, Skill ${remoteVersions.skill}`);
+      const parts: string[] = [];
+      if (remoteVersions) parts.push(`CLI ${remoteVersions.cli}, Skill ${remoteVersions.skill}`);
+      if (loopVersions) parts.push(`Loop Dev ${loopVersions.skill}`);
+      if (parts.length > 0) {
+        console.log(`Updated: ${parts.join(' | ')}`);
       } else {
         console.log('Done!');
       }
