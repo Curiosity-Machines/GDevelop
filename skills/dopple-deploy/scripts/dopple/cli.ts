@@ -101,6 +101,27 @@ async function main(): Promise<void> {
     }
 
     case 'deploy': {
+      // Authenticate first — required for deploy and version check
+      const accessToken = await resolveAuth(values.token);
+
+      // Check for CLI updates (uses auth token for authenticated storage access)
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://onljswkegixyjjhpcldn.supabase.co';
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ubGpzd2tlZ2l4eWpqaHBjbGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDY1MzEsImV4cCI6MjA4MTEyMjUzMX0.MtOk_dTmjvSduX2AW4YzmSwxaACua3B5z3O8gBRPG7k';
+        const sb = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: `Bearer ${accessToken}` } },
+        });
+        const { data: vData } = await sb.storage.from('sdk-assets').download('versions.json');
+        if (vData) {
+          const remote = JSON.parse(await vData.text()) as { cli: string };
+          if (remote.cli !== CLI_VERSION) {
+            console.log(`\n⚠  Update available: v${remote.cli} (current: v${CLI_VERSION})`);
+            console.log(`   Run 'dopple update' to get the latest.\n`);
+          }
+        }
+      } catch { /* version check is best-effort */ }
+
       const config = await loadConfig(projectRoot);
 
       // Build
@@ -121,9 +142,6 @@ async function main(): Promise<void> {
       } else {
         console.log('Skipping smoke test (--no-smoke).');
       }
-
-      // Authenticate
-      const accessToken = await resolveAuth(values.token);
 
       // Deploy
       const result: DeployResult = await deploy(config, projectRoot, accessToken, values.as);
@@ -181,51 +199,60 @@ async function main(): Promise<void> {
         console.log(`Latest:  CLI ${remoteVersions.cli}  |  Skill ${remoteVersions.skill}`);
       }
 
-      // Download CLI bundle (versioned filename for CDN cache-busting)
-      const cliFile = remoteVersions?.files?.cli || 'dopple-cli.cjs';
-      console.log(`Downloading ${cliFile}...`);
-      const { data: cliData, error: cliErr } = await supabase.storage
-        .from('sdk-assets')
-        .download(cliFile);
-
-      if (cliErr || !cliData) {
-        throw new Error(`Failed to download CLI: ${cliErr?.message || 'no data'}`);
-      }
-
-      // Write CLI to temp file, then atomic rename over self
-      const cliBytes = Buffer.from(await cliData.arrayBuffer());
-      const selfPath = typeof __filename !== 'undefined'
-        ? __filename
-        : new URL(import.meta.url).pathname;
-      const tmpPath = join(tmpdir(), `dopple-update-${randomUUID()}.cjs`);
-      await writeFileAsync(tmpPath, cliBytes, { mode: 0o755 });
-
-      try {
-        await rename(tmpPath, selfPath);
-        console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
-      } catch {
-        // rename fails across filesystems — fall back to copy
-        await writeFileAsync(selfPath, cliBytes, { mode: 0o755 });
-        await unlink(tmpPath).catch(() => {});
-        console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
-      }
-
-      // Download skill (versioned filename for CDN cache-busting)
-      const skillFile = remoteVersions?.files?.skill || 'dopple-deploy.md';
-      console.log(`Downloading ${skillFile}...`);
-      const { data: skillData, error: skillErr } = await supabase.storage
-        .from('sdk-assets')
-        .download(skillFile);
-
-      if (skillErr || !skillData) {
-        throw new Error(`Failed to download skill: ${skillErr?.message || 'no data'}`);
-      }
-
-      const skillBytes = Buffer.from(await skillData.arrayBuffer());
+      const { readFile: readFileAsync } = await import('node:fs/promises');
       const skillDir = join(homedir(), '.claude', 'commands');
       await mkdirAsync(skillDir, { recursive: true });
-      await writeFileAsync(join(skillDir, 'dopple-deploy.md'), skillBytes);
-      console.log(`Skill updated (${(skillBytes.length / 1024).toFixed(0)} KB)`);
+
+      // Check if CLI + skill need updating
+      const cliUpToDate = remoteVersions != null && CLI_VERSION === remoteVersions.cli;
+
+      if (cliUpToDate) {
+        console.log('CLI and skill already up to date.');
+      } else {
+        // Download CLI bundle (versioned filename for CDN cache-busting)
+        const cliFile = remoteVersions?.files?.cli || 'dopple-cli.cjs';
+        console.log(`Downloading ${cliFile}...`);
+        const { data: cliData, error: cliErr } = await supabase.storage
+          .from('sdk-assets')
+          .download(cliFile);
+
+        if (cliErr || !cliData) {
+          throw new Error(`Failed to download CLI: ${cliErr?.message || 'no data'}`);
+        }
+
+        // Write CLI to temp file, then atomic rename over self
+        const cliBytes = Buffer.from(await cliData.arrayBuffer());
+        const selfPath = typeof __filename !== 'undefined'
+          ? __filename
+          : new URL(import.meta.url).pathname;
+        const tmpPath = join(tmpdir(), `dopple-update-${randomUUID()}.cjs`);
+        await writeFileAsync(tmpPath, cliBytes, { mode: 0o755 });
+
+        try {
+          await rename(tmpPath, selfPath);
+          console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
+        } catch {
+          // rename fails across filesystems — fall back to copy
+          await writeFileAsync(selfPath, cliBytes, { mode: 0o755 });
+          await unlink(tmpPath).catch(() => {});
+          console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
+        }
+
+        // Download skill (versioned filename for CDN cache-busting)
+        const skillFile = remoteVersions?.files?.skill || 'dopple-deploy.md';
+        console.log(`Downloading ${skillFile}...`);
+        const { data: skillData, error: skillErr } = await supabase.storage
+          .from('sdk-assets')
+          .download(skillFile);
+
+        if (skillErr || !skillData) {
+          throw new Error(`Failed to download skill: ${skillErr?.message || 'no data'}`);
+        }
+
+        const skillBytes = Buffer.from(await skillData.arrayBuffer());
+        await writeFileAsync(join(skillDir, 'dopple-deploy.md'), skillBytes);
+        console.log(`Skill updated (${(skillBytes.length / 1024).toFixed(0)} KB)`);
+      }
 
       // Update loop-dev skill + types if available
       let loopVersions: {
@@ -241,41 +268,58 @@ async function main(): Promise<void> {
         }
       } catch { /* loop-dev versions may not exist yet */ }
 
+      let loopUpToDate = true;
       if (loopVersions?.files) {
-        console.log('');
-        console.log(`Updating loop-dev (v${loopVersions.skill})...`);
+        // Check installed loop-dev version from skill frontmatter
+        let installedLoopVersion: string | null = null;
+        try {
+          const loopSkillContent = await readFileAsync(join(skillDir, 'loop-dev.md'), 'utf-8');
+          const vMatch = loopSkillContent.match(/^version:\s*(.+)$/m);
+          if (vMatch) installedLoopVersion = vMatch[1].trim();
+        } catch { /* not installed yet */ }
 
-        const loopSkillFile = loopVersions.files.skill;
-        const { data: loopSkillData } = await supabase.storage
-          .from('sdk-assets')
-          .download(loopSkillFile);
-        if (loopSkillData) {
-          const loopSkillBytes = Buffer.from(await loopSkillData.arrayBuffer());
-          await writeFileAsync(join(skillDir, 'loop-dev.md'), loopSkillBytes);
-          console.log(`  Skill updated (${(loopSkillBytes.length / 1024).toFixed(0)} KB)`);
-        }
+        loopUpToDate = installedLoopVersion === loopVersions.skill;
 
-        const loopTypesFile = loopVersions.files.types;
-        const { data: loopTypesData } = await supabase.storage
-          .from('sdk-assets')
-          .download(loopTypesFile);
-        if (loopTypesData) {
-          const typesDir = join(homedir(), '.dopple', 'types');
-          await mkdirAsync(typesDir, { recursive: true });
-          const loopTypesBytes = Buffer.from(await loopTypesData.arrayBuffer());
-          await writeFileAsync(join(typesDir, 'loop-sdk-dx.d.ts'), loopTypesBytes);
-          console.log(`  Types updated (${(loopTypesBytes.length / 1024).toFixed(0)} KB)`);
+        if (loopUpToDate) {
+          console.log(`\nLoop Dev already up to date (v${loopVersions.skill}).`);
+        } else {
+          console.log('');
+          console.log(`Updating loop-dev (v${loopVersions.skill})...`);
+
+          const loopSkillFile = loopVersions.files.skill;
+          const { data: loopSkillData } = await supabase.storage
+            .from('sdk-assets')
+            .download(loopSkillFile);
+          if (loopSkillData) {
+            const loopSkillBytes = Buffer.from(await loopSkillData.arrayBuffer());
+            await writeFileAsync(join(skillDir, 'loop-dev.md'), loopSkillBytes);
+            console.log(`  Skill updated (${(loopSkillBytes.length / 1024).toFixed(0)} KB)`);
+          }
+
+          const loopTypesFile = loopVersions.files.types;
+          const { data: loopTypesData } = await supabase.storage
+            .from('sdk-assets')
+            .download(loopTypesFile);
+          if (loopTypesData) {
+            const typesDir = join(homedir(), '.dopple', 'types');
+            await mkdirAsync(typesDir, { recursive: true });
+            const loopTypesBytes = Buffer.from(await loopTypesData.arrayBuffer());
+            await writeFileAsync(join(typesDir, 'loop-sdk-dx.d.ts'), loopTypesBytes);
+            console.log(`  Types updated (${(loopTypesBytes.length / 1024).toFixed(0)} KB)`);
+          }
         }
       }
 
       console.log('');
-      const parts: string[] = [];
-      if (remoteVersions) parts.push(`CLI ${remoteVersions.cli}, Skill ${remoteVersions.skill}`);
-      if (loopVersions) parts.push(`Loop Dev ${loopVersions.skill}`);
-      if (parts.length > 0) {
-        console.log(`Updated: ${parts.join(' | ')}`);
+      if (cliUpToDate && loopUpToDate) {
+        console.log('Everything is up to date!');
       } else {
-        console.log('Done!');
+        const parts: string[] = [];
+        if (!cliUpToDate && remoteVersions) parts.push(`CLI ${remoteVersions.cli}, Skill ${remoteVersions.skill}`);
+        if (!loopUpToDate && loopVersions) parts.push(`Loop Dev ${loopVersions.skill}`);
+        if (parts.length > 0) {
+          console.log(`Updated: ${parts.join(' | ')}`);
+        }
       }
       break;
     }
