@@ -111,22 +111,53 @@ async function main() {
             break;
         }
         case 'update': {
-            const { execFileSync } = await import('node:child_process');
             const { homedir } = await import('node:os');
-            const { mkdirSync, writeFileSync } = await import('node:fs');
-            // Update CLI via npm
-            console.log('Updating CLI...');
-            execFileSync('npm', ['install', '-g', '@curiosity-machines/dopple-cli@latest'], { stdio: 'inherit' });
-            // Update skill
-            console.log('Updating skill...');
+            const { writeFile: writeFileAsync, mkdir: mkdirAsync, rename, unlink } = await import('node:fs/promises');
+            const { createClient } = await import('@supabase/supabase-js');
+            const { tmpdir } = await import('node:os');
+            const { randomUUID } = await import('node:crypto');
+            const accessToken = await resolveAuth(values.token);
+            const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://onljswkegixyjjhpcldn.supabase.co';
+            const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ubGpzd2tlZ2l4eWpqaHBjbGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDY1MzEsImV4cCI6MjA4MTEyMjUzMX0.MtOk_dTmjvSduX2AW4YzmSwxaACua3B5z3O8gBRPG7k';
+            const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+                global: { headers: { Authorization: `Bearer ${accessToken}` } },
+            });
+            // Download CLI bundle
+            console.log('Downloading CLI...');
+            const { data: cliData, error: cliErr } = await supabase.storage
+                .from('sdk-assets')
+                .download('dopple-cli.cjs');
+            if (cliErr || !cliData) {
+                throw new Error(`Failed to download CLI: ${cliErr?.message || 'no data'}`);
+            }
+            // Write CLI to temp file, then atomic rename over self
+            const cliBytes = Buffer.from(await cliData.arrayBuffer());
+            const selfPath = new URL(import.meta.url).pathname;
+            const tmpPath = join(tmpdir(), `dopple-update-${randomUUID()}.cjs`);
+            await writeFileAsync(tmpPath, cliBytes, { mode: 0o755 });
+            try {
+                await rename(tmpPath, selfPath);
+                console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
+            }
+            catch {
+                // rename fails across filesystems — fall back to copy
+                await writeFileAsync(selfPath, cliBytes, { mode: 0o755 });
+                await unlink(tmpPath).catch(() => { });
+                console.log(`CLI updated (${(cliBytes.length / 1024).toFixed(0)} KB)`);
+            }
+            // Download skill
+            console.log('Downloading skill...');
+            const { data: skillData, error: skillErr } = await supabase.storage
+                .from('sdk-assets')
+                .download('dopple-deploy.md');
+            if (skillErr || !skillData) {
+                throw new Error(`Failed to download skill: ${skillErr?.message || 'no data'}`);
+            }
+            const skillBytes = Buffer.from(await skillData.arrayBuffer());
             const skillDir = join(homedir(), '.claude', 'commands');
-            mkdirSync(skillDir, { recursive: true });
-            const skillContent = execFileSync('gh', [
-                'api', 'repos/Curiosity-Machines/claude-skills/contents/dopple-deploy/SKILL.md',
-                '--jq', '.content',
-            ], { encoding: 'utf-8' });
-            const decoded = Buffer.from(skillContent.trim(), 'base64').toString();
-            writeFileSync(join(skillDir, 'dopple-deploy.md'), decoded);
+            await mkdirAsync(skillDir, { recursive: true });
+            await writeFileAsync(join(skillDir, 'dopple-deploy.md'), skillBytes);
+            console.log(`Skill updated (${(skillBytes.length / 1024).toFixed(0)} KB)`);
             console.log('Done!');
             break;
         }
