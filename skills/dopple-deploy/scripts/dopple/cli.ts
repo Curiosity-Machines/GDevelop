@@ -7,7 +7,11 @@ import { login, whoami, resolveAuth } from './auth.js';
 import { loadConfig } from './config.js';
 import { runBuild } from './build.js';
 import { runSmokeTest } from './smoke.js';
+import { createRequire } from 'node:module';
 import { deploy, type DeployResult } from './deploy.js';
+
+const require = createRequire(import.meta.url);
+const CLI_VERSION: string = require('./package.json').version;
 
 // Configure global fetch proxy if HTTPS_PROXY is set (e.g. in containers).
 // Must run before any Supabase client calls.
@@ -32,6 +36,7 @@ Commands:
   whoami      Show the currently authenticated user
   deploy      Build, test, and deploy the activity
   update      Update the CLI and Claude Code skill
+  version     Show the installed CLI version
 
 Options:
   --as <name>      Override the activity name for this deploy
@@ -62,6 +67,14 @@ async function main(): Promise<void> {
   const projectRoot = resolve('.');
 
   switch (command) {
+    case 'version':
+    case '--version':
+    case '-v': {
+      console.log(`dopple ${CLI_VERSION}`);
+      process.exit(0);
+      break;
+    }
+
     case 'init': {
       await init(projectRoot);
       break;
