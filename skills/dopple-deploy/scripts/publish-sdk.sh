@@ -80,12 +80,13 @@ echo "Bundle: ${BUNDLE_SIZE} bytes"
 # --- Versioned filenames (cache-busting) ---
 VERSIONED_CLI="dopple-cli-${CLI_VERSION}.cjs"
 VERSIONED_SKILL="dopple-deploy-${CLI_VERSION}.md"
+VERSIONED_INSTALLER="dopple-deploy-install-${CLI_VERSION}.sh"
 
 # --- Get signed upload URLs ---
 # Upload to versioned paths (cache miss = instant availability) + installer + versions.json
 echo "Requesting upload URLs..."
-FILES_JSON=$(jq -n --arg cli "$VERSIONED_CLI" --arg skill "$VERSIONED_SKILL" \
-  '{files: [$cli, $skill, "dopple-deploy-install.sh", "versions.json"]}')
+FILES_JSON=$(jq -n --arg cli "$VERSIONED_CLI" --arg skill "$VERSIONED_SKILL" --arg inst "$VERSIONED_INSTALLER" \
+  '{files: [$cli, $skill, $inst, "versions.json"]}')
 
 RESPONSE=$(curl $CURL_PROXY -sf "$PUBLISH_URL" \
   -H "Authorization: Bearer $TOKEN" \
@@ -104,7 +105,7 @@ get_url() {
 
 CLI_URL=$(get_url "$VERSIONED_CLI")
 SKILL_URL=$(get_url "$VERSIONED_SKILL")
-INSTALLER_URL=$(get_url "dopple-deploy-install.sh")
+INSTALLER_URL=$(get_url "$VERSIONED_INSTALLER")
 VERSIONS_URL=$(get_url "versions.json")
 
 # --- Upload CLI ---
@@ -128,19 +129,19 @@ echo "Uploaded ${VERSIONED_SKILL} ($(( SKILL_SIZE / 1024 )) KB)"
 
 # --- Upload install script ---
 INSTALLER_SIZE=$(wc -c < "$INSTALL_SCRIPT" | tr -d ' ')
-echo "Uploading dopple-deploy-install.sh..."
+echo "Uploading ${VERSIONED_INSTALLER}..."
 curl $CURL_PROXY -sf "$INSTALLER_URL" \
   -X PUT \
   -H "Content-Type: text/x-shellscript" \
   --data-binary "@$INSTALL_SCRIPT" > /dev/null
 
-echo "Uploaded dopple-deploy-install.sh ($(( INSTALLER_SIZE / 1024 )) KB)"
+echo "Uploaded ${VERSIONED_INSTALLER} ($(( INSTALLER_SIZE / 1024 )) KB)"
 
 # --- Build and upload versions.json ---
 PUBLISHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 VERSIONS_PATH=$(mktemp /tmp/dopple-versions-XXXXXX.json)
 cat > "$VERSIONS_PATH" <<VJSON
-{"cli":"${CLI_VERSION}","skill":"${CLI_VERSION}","published_at":"${PUBLISHED_AT}","files":{"cli":"${VERSIONED_CLI}","skill":"${VERSIONED_SKILL}","installer":"dopple-deploy-install.sh"}}
+{"cli":"${CLI_VERSION}","skill":"${CLI_VERSION}","published_at":"${PUBLISHED_AT}","files":{"cli":"${VERSIONED_CLI}","skill":"${VERSIONED_SKILL}","installer":"${VERSIONED_INSTALLER}"}}
 VJSON
 
 echo "Uploading versions.json..."
@@ -158,5 +159,5 @@ echo ""
 echo "Published successfully."
 echo "  ${VERSIONED_CLI}:  $(( BUNDLE_SIZE / 1024 )) KB"
 echo "  ${VERSIONED_SKILL}:  $(( SKILL_SIZE / 1024 )) KB"
-echo "  dopple-deploy-install.sh: $(( INSTALLER_SIZE / 1024 )) KB"
+echo "  ${VERSIONED_INSTALLER}: $(( INSTALLER_SIZE / 1024 )) KB"
 echo "  versions.json:     CLI ${CLI_VERSION}"

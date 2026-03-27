@@ -429,13 +429,14 @@ function useVersionedInstalls(): SdkInstall[] {
         const versions = JSON.parse(await data.text()) as {
           cli: string;
           skill: string;
-          files?: { cli: string; skill: string };
+          files?: { cli: string; skill: string; installer: string };
         };
         if (!versions.files) return;
         setInstalls(prev => prev.map(i =>
           i.id === 'dopple-deploy' ? {
             ...i,
             version: `v${versions.cli}`,
+            installer: versions.files!.installer,
             payloads: [
               { key: versions.files!.skill, flag: '--skill-url' },
               { key: versions.files!.cli, flag: '--cli-url' },
