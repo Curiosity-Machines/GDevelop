@@ -5,7 +5,7 @@
 //   POST { name, entry_point, has_icon?, icon_extension? }
 //
 // Phase 2 (Finalize): Validates uploaded bundle and updates the activity record.
-//   POST { action: "finalize", activity_id, entry_point, icon_extension? }
+//   POST { action: "finalize", activity_id, deploy_tag, entry_point, icon_extension? }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -128,9 +128,10 @@ async function handleInitiate(req: Request, body: InitiateRequest): Promise<Resp
     activityId = inserted.id;
   }
 
-  // Generate signed upload URLs via service-role client
+  // Versioned deploy path — each deploy gets a unique path to avoid CDN cache issues
+  const deployTag = Date.now().toString();
   const serviceClient = createServiceClient();
-  const bundlePath = `${userId}/${activityId}`;
+  const bundlePath = `${userId}/${activityId}/${deployTag}`;
   const bundleStoragePath = `${bundlePath}/bundle.zip`;
 
   const { data: bundleUpload, error: bundleUploadError } = await serviceClient.storage
@@ -142,21 +143,23 @@ async function handleInitiate(req: Request, body: InitiateRequest): Promise<Resp
     return errorResponse('Server error', 500);
   }
 
-  // QR PNG upload URL (always requested — CLI uploads after generating locally)
-  const qrStoragePath = `${bundlePath}/qr.png`;
+  // QR PNG upload URL — not versioned, safe to overwrite (not cached by devices)
+  const qrBasePath = `${userId}/${activityId}`;
+  const qrStoragePath = `${qrBasePath}/qr.png`;
   const { data: qrUpload } = await serviceClient.storage
     .from(BUCKET)
     .createSignedUploadUrl(qrStoragePath, { upsert: true });
 
   const result: Record<string, unknown> = {
     activity_id: activityId,
+    deploy_tag: deployTag,
     bundle_upload_url: bundleUpload.signedUrl,
     bundle_upload_token: bundleUpload.token,
     bundle_path: bundlePath,
     ...(qrUpload ? { qr_upload_url: qrUpload.signedUrl } : {}),
   };
 
-  // Icon upload URL (if requested)
+  // Icon upload URL (if requested) — versioned alongside bundle
   if (body.has_icon && body.icon_extension) {
     const ext = body.icon_extension.toLowerCase();
     const iconStoragePath = `${bundlePath}/icon.${ext}`;
@@ -185,6 +188,7 @@ interface FinalizeRequest {
   action: 'finalize';
   activity_id: string;
   entry_point: string;
+  deploy_tag: string;
   icon_extension?: string;
 }
 
@@ -199,6 +203,9 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
   if (!body.entry_point.endsWith('.html')) {
     return errorResponse('entry_point must have .html extension', 400);
   }
+  if (!body.deploy_tag || typeof body.deploy_tag !== 'string') {
+    return errorResponse('Missing or invalid field: deploy_tag', 400);
+  }
 
   const userClient = createUserClient(req);
   const userId = await getUserId(userClient);
@@ -209,7 +216,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
   // Verify activity exists and belongs to user (RLS enforces ownership)
   const { data: activity, error: activityError } = await userClient
     .from('activities')
-    .select('id, name, version, description')
+    .select('id, name, version, description, bundle_path')
     .eq('id', body.activity_id)
     .single();
 
@@ -217,9 +224,11 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
     return errorResponse('Activity not found', 404);
   }
 
-  // Download and validate the uploaded bundle
+  const oldBundlePath = (activity as Record<string, unknown>).bundle_path as string | null;
+
+  // Download and validate the uploaded bundle from the versioned path
   const serviceClient = createServiceClient();
-  const bundlePath = `${userId}/${activity.id}`;
+  const bundlePath = `${userId}/${activity.id}/${body.deploy_tag}`;
   const bundleStoragePath = `${bundlePath}/bundle.zip`;
 
   const { data: bundleData, error: downloadError } = await serviceClient.storage
@@ -242,7 +251,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
     return errorResponse('Invalid bundle: not a valid ZIP file', 400);
   }
 
-  // Build icon URL if icon was uploaded
+  // Build icon URL if icon was uploaded (versioned alongside bundle)
   let iconUrl: string | null = null;
   if (body.icon_extension) {
     const ext = body.icon_extension.toLowerCase();
@@ -278,9 +287,26 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
     return errorResponse('Server error', 500);
   }
 
+  // Clean up previous version's files from storage (non-fatal)
+  if (oldBundlePath && oldBundlePath !== bundlePath) {
+    try {
+      const { data: oldFiles } = await serviceClient.storage
+        .from(BUCKET)
+        .list(oldBundlePath);
+
+      if (oldFiles && oldFiles.length > 0) {
+        const filePaths = oldFiles.map((f) => `${oldBundlePath}/${f.name}`);
+        await serviceClient.storage.from(BUCKET).remove(filePaths);
+      }
+    } catch (cleanupError) {
+      console.error('Non-fatal: failed to clean up old bundle:', cleanupError);
+    }
+  }
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const siteUrl = Deno.env.get('SITE_URL') || 'https://dopple-studio.pages.dev';
   const qrImageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${userId}/${activity.id}/qr.png`;
+  const publicBundleUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${bundlePath}/bundle.zip`;
 
   return jsonResponse({
     id: updated.id,
@@ -290,6 +316,7 @@ async function handleFinalize(req: Request, body: FinalizeRequest): Promise<Resp
     manifest_url: `${supabaseUrl}/functions/v1/get-manifest?id=${updated.id}`,
     qr_url: `${siteUrl}/qr/${updated.id}`,
     qr_image_url: qrImageUrl,
+    bundle_url: publicBundleUrl,
   });
 }
 

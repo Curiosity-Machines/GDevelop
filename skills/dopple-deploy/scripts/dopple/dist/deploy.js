@@ -1,0 +1,181 @@
+import { createWriteStream } from 'node:fs';
+import { readFile, unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
+import archiver from 'archiver';
+const DEFAULT_SUPABASE_URL = 'https://onljswkegixyjjhpcldn.supabase.co';
+function getSupabaseUrl() {
+    return process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+}
+/**
+ * Create a ZIP archive of the build output directory.
+ * Returns the path to the temporary ZIP file.
+ */
+async function createZip(buildDir) {
+    const zipPath = join(tmpdir(), `dopple-${randomUUID()}.zip`);
+    return new Promise((resolve, reject) => {
+        const output = createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        output.on('close', () => resolve(zipPath));
+        archive.on('error', reject);
+        archive.pipe(output);
+        archive.directory(buildDir, false);
+        archive.finalize();
+    });
+}
+/**
+ * Poll a URL with HEAD requests until it returns 200.
+ * Returns true if the URL became available, false if it timed out.
+ */
+async function waitForUrl(url, { interval = 2000, maxAttempts = 5 } = {}) {
+    for (let i = 0; i < maxAttempts; i++) {
+        try {
+            const res = await fetch(url, { method: 'HEAD' });
+            if (res.ok)
+                return true;
+        }
+        catch {
+            // Network error, keep trying
+        }
+        if (i < maxAttempts - 1) {
+            await new Promise((r) => setTimeout(r, interval));
+        }
+    }
+    return false;
+}
+/**
+ * Deploy an activity to Dopple Studio.
+ *
+ * Three-phase deployment:
+ * 1. POST metadata -> get signed upload URLs
+ * 2. PUT ZIP bundle and icon to signed URLs
+ * 3. POST finalize -> get manifest URL and version
+ */
+export async function deploy(config, projectRoot, accessToken, nameOverride) {
+    const supabaseUrl = getSupabaseUrl();
+    const deployUrl = `${supabaseUrl}/functions/v1/deploy-activity`;
+    const activityName = nameOverride || config.name;
+    const buildDir = join(projectRoot, config.build_output);
+    // Create ZIP of build output
+    console.log('Packaging build output...');
+    const zipPath = await createZip(buildDir);
+    let iconData = null;
+    let iconContentType = 'image/png';
+    if (config.icon) {
+        const iconPath = join(projectRoot, config.icon);
+        iconData = await readFile(iconPath);
+        if (config.icon.endsWith('.svg')) {
+            iconContentType = 'image/svg+xml';
+        }
+        else if (config.icon.endsWith('.jpg') || config.icon.endsWith('.jpeg')) {
+            iconContentType = 'image/jpeg';
+        }
+    }
+    try {
+        // Phase 1: Request signed upload URLs
+        console.log(`Deploying "${activityName}"...`);
+        const iconExtension = config.icon
+            ? config.icon.split('.').pop()?.toLowerCase()
+            : undefined;
+        const initBody = {
+            action: 'init',
+            name: activityName,
+            entry_point: config.entry_point,
+            has_icon: !!iconData,
+            ...(iconData && iconExtension ? { icon_extension: iconExtension } : {}),
+            ...(config.description ? { description: config.description } : {}),
+        };
+        const initRes = await fetch(deployUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(initBody),
+        });
+        if (!initRes.ok) {
+            const errText = await initRes.text();
+            throw new Error(`Deploy init failed (${initRes.status}): ${errText}`);
+        }
+        const initData = await initRes.json();
+        // Phase 2: Upload files to signed URLs
+        console.log('Uploading bundle...');
+        const zipData = new Uint8Array(await readFile(zipPath));
+        const bundleRes = await fetch(initData.bundle_upload_url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/zip' },
+            body: zipData,
+        });
+        if (!bundleRes.ok) {
+            throw new Error(`Bundle upload failed (${bundleRes.status})`);
+        }
+        if (iconData && initData.icon_upload_url) {
+            console.log('Uploading icon...');
+            const iconRes = await fetch(initData.icon_upload_url, {
+                method: 'PUT',
+                headers: { 'Content-Type': iconContentType },
+                body: new Uint8Array(iconData),
+            });
+            if (!iconRes.ok) {
+                throw new Error(`Icon upload failed (${iconRes.status})`);
+            }
+        }
+        // Generate and upload QR PNG (encodes the manifest URL so devices can scan directly)
+        if (initData.qr_upload_url) {
+            try {
+                const QRCode = await import('qrcode');
+                const manifestUrl = `${supabaseUrl}/functions/v1/get-manifest?id=${initData.activity_id}`;
+                const qrPath = join(tmpdir(), `dopple-qr-${randomUUID()}.png`);
+                await QRCode.toFile(qrPath, manifestUrl, { width: 512, margin: 2 });
+                const qrData = new Uint8Array(await readFile(qrPath));
+                await fetch(initData.qr_upload_url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'image/png' },
+                    body: qrData,
+                });
+                await unlink(qrPath).catch(() => { });
+            }
+            catch {
+                // Non-fatal — deploy continues without the QR image
+            }
+        }
+        // Phase 3: Finalize
+        console.log('Finalizing deploy...');
+        const finalizeRes = await fetch(deployUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+                action: 'finalize',
+                activity_id: initData.activity_id,
+                deploy_tag: initData.deploy_tag,
+                entry_point: config.entry_point,
+                ...(iconExtension ? { icon_extension: iconExtension } : {}),
+            }),
+        });
+        if (!finalizeRes.ok) {
+            const errText = await finalizeRes.text();
+            throw new Error(`Deploy finalize failed (${finalizeRes.status}): ${errText}`);
+        }
+        const result = await finalizeRes.json();
+        // Verify bundle is publicly accessible before returning
+        if (result.bundle_url) {
+            console.log('Verifying bundle availability...');
+            const ready = await waitForUrl(result.bundle_url);
+            if (ready) {
+                console.log('Bundle ready.');
+            }
+            else {
+                console.warn('Warning: Bundle uploaded but may not be immediately available via CDN.');
+            }
+        }
+        return result;
+    }
+    finally {
+        // Clean up temp ZIP
+        await unlink(zipPath).catch(() => { });
+    }
+}

@@ -14,6 +14,7 @@ export interface DeployResult {
   manifest_url: string;
   qr_url: string;
   qr_image_url?: string;
+  bundle_url?: string;
 }
 
 const DEFAULT_SUPABASE_URL = 'https://onljswkegixyjjhpcldn.supabase.co';
@@ -40,6 +41,25 @@ async function createZip(buildDir: string): Promise<string> {
     archive.directory(buildDir, false);
     archive.finalize();
   });
+}
+
+/**
+ * Poll a URL with HEAD requests until it returns 200.
+ * Returns true if the URL became available, false if it timed out.
+ */
+async function waitForUrl(url: string, { interval = 2000, maxAttempts = 5 } = {}): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      if (res.ok) return true;
+    } catch {
+      // Network error, keep trying
+    }
+    if (i < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, interval));
+    }
+  }
+  return false;
 }
 
 /**
@@ -110,6 +130,7 @@ export async function deploy(
 
     const initData = await initRes.json() as {
       activity_id: string;
+      deploy_tag: string;
       bundle_upload_url: string;
       qr_upload_url?: string;
       icon_upload_url?: string;
@@ -172,6 +193,7 @@ export async function deploy(
       body: JSON.stringify({
         action: 'finalize',
         activity_id: initData.activity_id,
+        deploy_tag: initData.deploy_tag,
         entry_point: config.entry_point,
         ...(iconExtension ? { icon_extension: iconExtension } : {}),
       }),
@@ -183,6 +205,18 @@ export async function deploy(
     }
 
     const result = await finalizeRes.json() as DeployResult;
+
+    // Verify bundle is publicly accessible before returning
+    if (result.bundle_url) {
+      console.log('Verifying bundle availability...');
+      const ready = await waitForUrl(result.bundle_url);
+      if (ready) {
+        console.log('Bundle ready.');
+      } else {
+        console.warn('Warning: Bundle uploaded but may not be immediately available via CDN.');
+      }
+    }
+
     return result;
   } finally {
     // Clean up temp ZIP
