@@ -7,11 +7,20 @@ import { login, whoami, resolveAuth } from './auth.js';
 import { loadConfig } from './config.js';
 import { runBuild } from './build.js';
 import { runSmokeTest } from './smoke.js';
-import { createRequire } from 'node:module';
 import { deploy, type DeployResult } from './deploy.js';
 
-const require = createRequire(import.meta.url);
-const CLI_VERSION: string = require('./package.json').version;
+// Injected by esbuild --define at bundle time; falls back to reading package.json in dev
+declare const DOPPLE_CLI_VERSION: string | undefined;
+const CLI_VERSION: string = typeof DOPPLE_CLI_VERSION !== 'undefined'
+  ? DOPPLE_CLI_VERSION
+  : await (async () => {
+      try {
+        const { createRequire } = await import('node:module');
+        return createRequire(import.meta.url)('./package.json').version as string;
+      } catch {
+        return 'unknown';
+      }
+    })();
 
 // Configure global fetch proxy if HTTPS_PROXY is set (e.g. in containers).
 // Must run before any Supabase client calls.

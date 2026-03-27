@@ -59,12 +59,14 @@ fi
 echo "Authenticated."
 
 # --- Build CJS bundle ---
-echo "Building CJS bundle..."
+CLI_VERSION=$(jq -r '.version' "$DOPPLE_DIR/package.json")
+echo "Building CJS bundle (v${CLI_VERSION})..."
 BUNDLE_PATH=$(mktemp /tmp/dopple-cli-XXXXXX.cjs)
 npx esbuild "$DOPPLE_DIR/dist/cli.js" \
   --bundle --platform=node --format=cjs \
   --outfile="$BUNDLE_PATH" \
   --external:playwright --external:@playwright/test \
+  --define:DOPPLE_CLI_VERSION="'${CLI_VERSION}'" \
   --log-level=warning
 
 BUNDLE_SIZE=$(wc -c < "$BUNDLE_PATH" | tr -d ' ')
@@ -107,7 +109,6 @@ curl $CURL_PROXY -sf "$SKILL_URL" \
 echo "Uploaded dopple-deploy.md ($(( SKILL_SIZE / 1024 )) KB)"
 
 # --- Build and upload versions.json ---
-CLI_VERSION=$(jq -r '.version' "$DOPPLE_DIR/package.json")
 PUBLISHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 VERSIONS_PATH=$(mktemp /tmp/dopple-versions-XXXXXX.json)
 cat > "$VERSIONS_PATH" <<VJSON
