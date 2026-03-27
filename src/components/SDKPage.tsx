@@ -408,7 +408,7 @@ const STATIC_INSTALLS: SdkInstall[] = [
   {
     id: 'dopple-deploy',
     label: 'Dopple Deploy',
-    version: 'v0.3.2',
+    version: 'v0.3.3',
     desc: 'Claude Code skill + CLI for deploying to Dopple Studio',
     installer: 'dopple-deploy-install.sh',
     payloads: [
