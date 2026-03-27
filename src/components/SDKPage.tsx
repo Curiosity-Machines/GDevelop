@@ -819,6 +819,7 @@ if (Loop.motion)  Loop.motion.start({ frequency: 60 });`}
               </h3>
               <p className="text-[13px] m-0" style={{ color: '#9999b0' }}>
                 CLI tool for automated builds, versioning, and deployment.
+                Verifies bundle availability before returning — QR codes work immediately.
               </p>
               <div className="flex flex-col gap-3 mt-auto">
                 <p className="text-[12px] m-0 mb-2" style={{ color: '#9999b0' }}>
