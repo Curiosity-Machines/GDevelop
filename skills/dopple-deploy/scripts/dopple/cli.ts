@@ -152,7 +152,9 @@ async function main(): Promise<void> {
 
       // Write CLI to temp file, then atomic rename over self
       const cliBytes = Buffer.from(await cliData.arrayBuffer());
-      const selfPath = new URL(import.meta.url).pathname;
+      const selfPath = typeof __filename !== 'undefined'
+        ? __filename
+        : new URL(import.meta.url).pathname;
       const tmpPath = join(tmpdir(), `dopple-update-${randomUUID()}.cjs`);
       await writeFileAsync(tmpPath, cliBytes, { mode: 0o755 });
 
