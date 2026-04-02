@@ -229,11 +229,10 @@ async function main(): Promise<void> {
           throw new Error(`Failed to download CLI: ${cliErr?.message || 'no data'}`);
         }
 
-        // Write CLI to temp file, then atomic rename over self
+        // Write CLI to ~/.dopple/cli.cjs (canonical location)
         const cliBytes = Buffer.from(await cliData.arrayBuffer());
-        const selfPath = typeof __filename !== 'undefined'
-          ? __filename
-          : new URL(import.meta.url).pathname;
+        const selfPath = join(homedir(), '.dopple', 'cli.cjs');
+        await mkdirAsync(join(homedir(), '.dopple'), { recursive: true });
         const tmpPath = join(tmpdir(), `dopple-update-${randomUUID()}.cjs`);
         await writeFileAsync(tmpPath, cliBytes, { mode: 0o755 });
 
@@ -261,6 +260,21 @@ async function main(): Promise<void> {
         const skillBytes = Buffer.from(await skillData.arrayBuffer());
         await writeFileAsync(join(skillDir, 'dopple-deploy.md'), skillBytes);
         console.log(`Skill updated (${(skillBytes.length / 1024).toFixed(0)} KB)`);
+
+        // Ensure bin wrapper exists so `dopple` is on PATH via ~/.dopple/bin
+        const binDir = join(homedir(), '.dopple', 'bin');
+        const binWrapper = join(binDir, 'dopple');
+        try {
+          await import('node:fs/promises').then(fs => fs.access(binWrapper));
+        } catch {
+          await mkdirAsync(binDir, { recursive: true });
+          await writeFileAsync(
+            binWrapper,
+            `#!/usr/bin/env node\nrequire(require('path').join(require('os').homedir(), '.dopple', 'cli.cjs'));\n`,
+            { mode: 0o755 },
+          );
+          console.log(`Created ${binWrapper}`);
+        }
       }
 
       // Update loop-dev skill + types if available
