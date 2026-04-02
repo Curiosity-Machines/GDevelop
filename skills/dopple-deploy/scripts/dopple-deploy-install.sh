@@ -46,7 +46,17 @@ curl -sL "$CLI_URL" -o "$CLI_DIR/cli.cjs"
 chmod +x "$CLI_DIR/cli.cjs"
 echo "  ~/.dopple/cli.cjs ✓"
 
-# Set up shell alias if not already present
+# Create bin wrapper
+BIN_DIR="$HOME/.dopple/bin"
+mkdir -p "$BIN_DIR"
+cat > "$BIN_DIR/dopple" << 'WRAPPER'
+#!/usr/bin/env node
+require(require('path').join(require('os').homedir(), '.dopple', 'cli.cjs'));
+WRAPPER
+chmod +x "$BIN_DIR/dopple"
+echo "  ~/.dopple/bin/dopple ✓"
+
+# Add ~/.dopple/bin to PATH if not already present
 SHELL_RC=""
 if [ -n "${ZSH_VERSION:-}" ] || [ "$(basename "$SHELL" 2>/dev/null)" = "zsh" ]; then
   SHELL_RC="$HOME/.zshrc"
@@ -55,11 +65,47 @@ elif [ -n "${BASH_VERSION:-}" ] || [ "$(basename "$SHELL" 2>/dev/null)" = "bash"
 fi
 
 if [ -n "$SHELL_RC" ] && [ -f "$SHELL_RC" ]; then
-  if ! grep -q 'alias dopple=' "$SHELL_RC" 2>/dev/null; then
+  # Remove old alias if present
+  if grep -q 'alias dopple=' "$SHELL_RC" 2>/dev/null; then
+    sed -i.bak '/# Dopple CLI/d; /alias dopple=/d' "$SHELL_RC"
+    rm -f "${SHELL_RC}.bak"
+  fi
+  # Add PATH entry if not present
+  if ! grep -q '\.dopple/bin' "$SHELL_RC" 2>/dev/null; then
     echo "" >> "$SHELL_RC"
     echo '# Dopple CLI' >> "$SHELL_RC"
-    echo 'alias dopple="node ~/.dopple/cli.cjs"' >> "$SHELL_RC"
+    echo 'export PATH="$HOME/.dopple/bin:$PATH"' >> "$SHELL_RC"
   fi
+fi
+
+# Install loop-dev skill + types from Supabase
+SUPABASE_URL="https://onljswkegixyjjhpcldn.supabase.co"
+ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ubGpzd2tlZ2l4eWpqaHBjbGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDY1MzEsImV4cCI6MjA4MTEyMjUzMX0.MtOk_dTmjvSduX2AW4YzmSwxaACua3B5z3O8gBRPG7k"
+STORAGE_BASE="$SUPABASE_URL/storage/v1/object/public/sdk-assets"
+
+LOOP_VERSIONS=$(curl -sL "$STORAGE_BASE/loop-dev-versions.json" 2>/dev/null || echo "")
+if [ -n "$LOOP_VERSIONS" ] && echo "$LOOP_VERSIONS" | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))" 2>/dev/null; then
+  LOOP_SKILL_FILE=$(echo "$LOOP_VERSIONS" | node -e "const v=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(v.files?.skill||'')")
+  LOOP_TYPES_FILE=$(echo "$LOOP_VERSIONS" | node -e "const v=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(v.files?.types||'')")
+  LOOP_VERSION=$(echo "$LOOP_VERSIONS" | node -e "const v=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(v.skill||'')")
+
+  if [ -n "$LOOP_SKILL_FILE" ]; then
+    curl -sL "$STORAGE_BASE/$LOOP_SKILL_FILE" -o "$SKILL_DIR/loop-dev.md"
+    echo "  ~/.claude/commands/loop-dev.md ✓"
+  fi
+
+  if [ -n "$LOOP_TYPES_FILE" ]; then
+    TYPES_DIR="$HOME/.dopple/types"
+    mkdir -p "$TYPES_DIR"
+    curl -sL "$STORAGE_BASE/$LOOP_TYPES_FILE" -o "$TYPES_DIR/loop-sdk-dx.d.ts"
+    echo "  ~/.dopple/types/loop-sdk-dx.d.ts ✓"
+  fi
+
+  if [ -n "$LOOP_VERSION" ]; then
+    echo "  Loop Dev v${LOOP_VERSION} ✓"
+  fi
+else
+  echo "  (loop-dev not available — install later with 'dopple update')"
 fi
 
 # Show version
@@ -81,6 +127,6 @@ fi
 
 echo "In Claude Code, type /dopple-deploy to use the skill."
 if [ -n "$SHELL_RC" ]; then
-  echo "Open a new terminal for the dopple alias to take effect."
+  echo "Open a new terminal or run: export PATH=\"\$HOME/.dopple/bin:\$PATH\""
 fi
 )

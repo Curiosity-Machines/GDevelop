@@ -1,4 +1,4 @@
-import { access, readFile, mkdir } from 'node:fs/promises';
+import { access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -163,17 +163,60 @@ async function checkLoopDevTypes(): Promise<CheckResult> {
 
 // ── CLI + version checks ────────────────────────────────────────────
 
+const BIN_DIR = join(homedir(), '.dopple', 'bin');
+const BIN_WRAPPER = join(BIN_DIR, 'dopple');
+const BIN_WRAPPER_CONTENT = `#!/usr/bin/env node\nrequire(require('path').join(require('os').homedir(), '.dopple', 'cli.cjs'));\n`;
+
 async function checkCliOnPath(): Promise<CheckResult> {
   try {
     const output = execFileSync('which', ['dopple'], { stdio: 'pipe' }).toString().trim();
     return { name: 'CLI on PATH', ok: true, message: output, fixable: false };
   } catch {
+    // Check if the bin wrapper exists but PATH is missing
+    let wrapperExists = false;
+    try {
+      await access(BIN_WRAPPER);
+      wrapperExists = true;
+    } catch { /* doesn't exist */ }
+
     return {
       name: 'CLI on PATH',
       ok: false,
       message: 'dopple not found on PATH',
-      fixable: false,
-      instruction: 'Ensure ~/bin or ~/.dopple/bin is in your PATH, or reinstall with the install script',
+      fixable: true,
+      fix: async () => {
+        // Create bin wrapper if missing
+        if (!wrapperExists) {
+          await mkdir(BIN_DIR, { recursive: true });
+          await writeFile(BIN_WRAPPER, BIN_WRAPPER_CONTENT, { mode: 0o755 });
+        }
+
+        // Add to shell rc if possible
+        const shell = process.env.SHELL || '';
+        const rcFile = shell.includes('zsh') ? join(homedir(), '.zshrc')
+          : shell.includes('bash') ? join(homedir(), '.bashrc')
+          : null;
+
+        if (rcFile) {
+          try {
+            const rc = await readFile(rcFile, 'utf-8');
+            // Remove old alias if present
+            let updated = rc.replace(/\n?# Dopple CLI\nalias dopple=[^\n]*\n?/g, '');
+            if (!updated.includes('.dopple/bin')) {
+              updated += `\n# Dopple CLI\nexport PATH="$HOME/.dopple/bin:$PATH"\n`;
+            }
+            if (updated !== rc) {
+              await writeFile(rcFile, updated);
+            }
+          } catch {
+            // rc file doesn't exist, create the PATH line
+            await writeFile(rcFile, `# Dopple CLI\nexport PATH="$HOME/.dopple/bin:$PATH"\n`);
+          }
+        }
+
+        return `Created ${BIN_WRAPPER} — open a new terminal or run: export PATH="$HOME/.dopple/bin:$PATH"`;
+      },
+      instruction: `Run with --fix, or manually: mkdir -p ~/.dopple/bin && add ~/.dopple/bin to your PATH`,
     };
   }
 }
