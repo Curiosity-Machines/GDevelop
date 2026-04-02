@@ -8,6 +8,7 @@ import { loadConfig } from './config.js';
 import { runBuild } from './build.js';
 import { runSmokeTest } from './smoke.js';
 import { deploy, type DeployResult } from './deploy.js';
+import { doctor } from './doctor.js';
 
 // Injected by esbuild --define at bundle time; falls back to reading package.json in dev
 declare const DOPPLE_CLI_VERSION: string | undefined;
@@ -44,6 +45,7 @@ Commands:
   login       Authenticate via browser OAuth
   whoami      Show the currently authenticated user
   deploy      Build, test, and deploy the activity
+  doctor      Check environment, skills, and auth health
   update      Update the CLI and Claude Code skill
   version     Show the installed CLI version
 
@@ -51,6 +53,7 @@ Options:
   --as <name>      Override the activity name for this deploy
   --token <token>  Use an explicit auth token
   --no-smoke       Skip the Playwright smoke test
+  --fix            Auto-fix issues found by doctor
   -h, --help       Show this help message
 `.trim();
 
@@ -63,6 +66,7 @@ async function main(): Promise<void> {
       as: { type: 'string' },
       token: { type: 'string' },
       'no-smoke': { type: 'boolean', default: false },
+      fix: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -97,6 +101,11 @@ async function main(): Promise<void> {
     case 'whoami': {
       const email = await whoami(values.token);
       console.log(email);
+      break;
+    }
+
+    case 'doctor': {
+      await doctor(CLI_VERSION, !!values.fix);
       break;
     }
 
